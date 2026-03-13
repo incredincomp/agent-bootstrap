@@ -37,8 +37,16 @@ In scope:
 Out of scope:
 {{OUT_OF_SCOPE_ITEMS}}
 
-<!-- Be specific. Example in-scope: "REST API handlers, database models, integration tests."
-     Example out-of-scope: "Frontend code, infrastructure provisioning, CI/CD pipeline changes." -->
+<!-- Be specific. Use bullet lists.
+     In-scope example:
+       - REST API handlers and middleware (src/api/)
+       - Database models and migrations (src/models/, migrations/)
+       - Unit and integration tests (tests/)
+     Out-of-scope example:
+       - Frontend code (lives in a separate repo)
+       - Infrastructure provisioning (managed in the infra repo)
+       - CI/CD pipeline configuration (managed by the platform team)
+     Do not leave these as single-line placeholders — fill with actual scope boundaries. -->
 
 ---
 
@@ -83,17 +91,22 @@ These files define the state and rules of this repository:
 ## Forbidden actions
 
 Do not:
-- {{FORBIDDEN_ACTION_1}}
-- {{FORBIDDEN_ACTION_2}}
 - Modify files outside the declared milestone scope without recording the decision.
 - Add or upgrade dependencies without recording the rationale in the tracker.
 - Remove or rename authoritative files without updating all cross-references.
 - Mark milestones complete without running validation.
 - Invent repo history, architecture, or decisions not supported by evidence.
+- {{REPO_SPECIFIC_FORBIDDEN_ACTION_1}}
+- {{REPO_SPECIFIC_FORBIDDEN_ACTION_2}}
 
-<!-- Add repo-specific forbidden actions. Examples:
-     "Do not modify the generated client in src/generated/ directly — regenerate from the OpenAPI spec."
-     "Do not commit secrets or API keys." -->
+<!-- Replace the REPO_SPECIFIC_FORBIDDEN_ACTION placeholders with constraints that are unique
+     to this repository. Add as many lines as needed — not limited to two. Examples:
+     "Do not modify the generated client in src/generated/ — regenerate from the OpenAPI spec instead."
+     "Do not commit secrets, API keys, or .env files."
+     "Do not run terraform apply without explicit authorization from a human operator."
+     "Do not edit migrations/ directly — create new migration files using the ORM CLI."
+     "Do not push directly to main — all changes must go through a pull request."
+     If no repo-specific forbidden actions apply beyond the defaults above, remove the placeholder lines. -->
 
 ---
 

@@ -27,6 +27,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 4 | Templates and schemas | ✅ Complete | 7 templates + 2 JSON schemas created |
 | 5 | Validation and examples | ✅ Complete | validate_bootstrap.py + 4 example-notes.md files; script runs clean |
 | 6 | Closeout | ✅ Complete | Tracker updated; README verified; validation recorded below |
+| 7 | Dogfood and tighten | ✅ Complete | Validated bootstrap against itself; fixed `--target-dir` gap; strengthened prompts and templates |
 
 ---
 
@@ -40,6 +41,8 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | bootstrap-manifest.yaml uses YAML not JSON | More human-readable for a control plane file | JSON (acceptable but less readable for humans) |
 | validate_bootstrap.py checks bootstrap repo files, not target repo files | Script is run against this repo to confirm scaffold integrity | Dual-mode script (deferred to future milestone) |
 | .gitignore added for __pycache__ and .pyc files | Prevent Python build artifacts from being committed | Not adding (rejected: would pollute git status) |
+| Added `--target-dir` flag to validate_bootstrap.py | Enables automated validation of bootstrapped target repos; was listed as open improvement; README already referenced this flag but it didn't exist | Separate script (rejected: unnecessary duplication) |
+| Moved universal forbidden actions to the fixed list in AGENTS.md.template | Agents were filling `{{FORBIDDEN_ACTION_1/2}}` with generic content; concrete defaults + repo-specific override placeholders produce better output | All placeholders (rejected: too easy to leave blank) |
 
 ---
 
@@ -83,6 +86,16 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
+## Files modified in Milestone 7 (dogfood and tighten)
+
+- `scripts/validate_bootstrap.py` — added `--target-dir` mode, placeholder detection (`check_placeholders`), and refactored `check_required_files` to accept a file list
+- `prompts/new-repo-bootstrap.md` — Step 10: added concrete grep command and `--target-dir` reference
+- `prompts/closeout-and-handoff.md` — Step 2: added concrete grep and JSON validation commands
+- `templates/AGENTS.md.template` — moved universal forbidden actions to fixed list; repo-specific placeholders now clearly labeled with richer examples
+- `templates/IMPLEMENTATION_TRACKER.md.template` — expanded decisions table to two example rows with richer comments; updated validation status table to show concrete commands
+
+---
+
 ## Validation status
 
 | Check | Result | Method |
@@ -94,12 +107,15 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | repo_discovery.json.template is valid JSON | ✅ Pass | `python -m json.tool` |
 | validate_bootstrap.py exits 0 | ✅ Pass | Direct execution |
 | Python script syntax | ✅ Pass | `python -m py_compile scripts/validate_bootstrap.py` |
+| `--target-dir` mode detects missing files | ✅ Pass | `python scripts/validate_bootstrap.py --target-dir /tmp` (7 failures expected) |
+| `--target-dir` mode detects unfilled placeholders | ✅ Pass | Manual test with synthetic target dir |
+| `--target-dir` mode validates JSON artifacts | ✅ Pass | Manual test with valid repo_discovery.json |
 
 ---
 
 ## Open improvements (future milestones)
 
-- [ ] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo (not just this bootstrap repo)
+- [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
 - [ ] Add a `jsonschema`-based validation mode (optional, behind `--strict` flag)
 - [ ] Add a GitHub Actions workflow to run validate_bootstrap.py on push
 - [ ] Expand examples with concrete file trees and discovery findings

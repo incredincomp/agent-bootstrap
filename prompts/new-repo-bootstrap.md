@@ -115,10 +115,18 @@ Create the live state file for the target repo.
 
 ### Step 10 — Validate
 
-Run or simulate validation:
-- Confirm all required files from `bootstrap-manifest.yaml` (`target_repo_required_files`) are present.
-- Confirm no files still contain unfilled `{{PLACEHOLDER}}` markers.
-- Confirm `artifacts/ai/repo_discovery.json` is valid JSON.
+Run validation:
+- Run `scripts/validate_bootstrap.py --target-dir <path-to-target-repo>` (requires access to the bootstrap source repo's scripts directory), **or** perform the following manual checks:
+  1. Confirm all required files from `bootstrap-manifest.yaml` (`target_repo_required_files`) are present.
+  2. Confirm no files still contain unfilled `{{PLACEHOLDER}}` markers:
+     ```bash
+     grep -rn '{{' AGENTS.md IMPLEMENTATION_TRACKER.md docs/ai/ bootstrap/ artifacts/ai/
+     # Expected: no output. Any output indicates unfilled placeholders.
+     ```
+  3. Confirm `artifacts/ai/repo_discovery.json` is valid JSON:
+     ```bash
+     python -m json.tool artifacts/ai/repo_discovery.json > /dev/null && echo "Valid JSON"
+     ```
 - Record the validation result in `IMPLEMENTATION_TRACKER.md`.
 
 ---
