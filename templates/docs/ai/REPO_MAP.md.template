@@ -1,0 +1,128 @@
+# REPO_MAP.md — Repository Map for {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+This file provides a human and agent-readable map of the repository.
+Fill every {{PLACEHOLDER}} with real evidence from repository inspection.
+Do not invent directory structure or file purposes.
+Update this file when the structure changes significantly.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+**Based on:** Discovery run / manual inspection
+
+---
+
+## Repository overview
+
+{{REPO_OVERVIEW}}
+
+<!-- 2–4 sentences: what this repo contains, what problem it solves, how it is organized at a high level. -->
+
+---
+
+## Top-level structure
+
+```
+{{TOP_LEVEL_TREE}}
+```
+
+<!-- Paste the output of `ls -1` or `tree -L 1` here.
+     Example:
+     .
+     ├─ README.md
+     ├─ src/
+     ├─ tests/
+     ├─ docs/
+     └─ Makefile
+-->
+
+---
+
+## Directory purposes
+
+| Path | Purpose |
+|------|---------|
+| `{{DIR_1}}` | {{DIR_1_PURPOSE}} |
+| `{{DIR_2}}` | {{DIR_2_PURPOSE}} |
+| `{{DIR_3}}` | {{DIR_3_PURPOSE}} |
+
+<!-- Add a row for every significant top-level directory.
+     Keep descriptions short and factual. -->
+
+---
+
+## Key files
+
+| File | Purpose |
+|------|---------|
+| `{{KEY_FILE_1}}` | {{KEY_FILE_1_PURPOSE}} |
+| `{{KEY_FILE_2}}` | {{KEY_FILE_2_PURPOSE}} |
+| `{{KEY_FILE_3}}` | {{KEY_FILE_3_PURPOSE}} |
+
+<!-- Include: primary config files, entry points, lock files, CI config. -->
+
+---
+
+## Entry points
+
+| Type | Path | Notes |
+|------|------|-------|
+| Application entry | `{{ENTRY_POINT_PATH}}` | {{ENTRY_POINT_NOTES}} |
+| Test runner | `{{TEST_RUNNER_PATH}}` | {{TEST_RUNNER_NOTES}} |
+| Build script | `{{BUILD_SCRIPT_PATH}}` | {{BUILD_SCRIPT_NOTES}} |
+
+<!-- Fill with actual entry points discovered during inspection. -->
+
+---
+
+## Test structure
+
+- **Test directory:** `{{TEST_DIR}}`
+- **Test framework:** `{{TEST_FRAMEWORK}}`
+- **Run command:** `{{TEST_COMMAND}}`
+- **Test types present:** {{TEST_TYPES}}
+
+<!-- Examples for test types: "unit, integration", "unit only", "e2e + unit" -->
+
+---
+
+## Configuration files
+
+| File | Purpose | Format |
+|------|---------|--------|
+| `{{CONFIG_FILE_1}}` | {{CONFIG_FILE_1_PURPOSE}} | {{CONFIG_FILE_1_FORMAT}} |
+| `{{CONFIG_FILE_2}}` | {{CONFIG_FILE_2_PURPOSE}} | {{CONFIG_FILE_2_FORMAT}} |
+
+<!-- Include all authoritative config files. Format examples: YAML, JSON, TOML, .env -->
+
+---
+
+## CI/CD
+
+- **CI provider:** {{CI_PROVIDER}}
+- **Config location:** `{{CI_CONFIG_PATH}}`
+- **Key pipelines/workflows:** {{CI_WORKFLOWS}}
+
+<!-- Examples: "GitHub Actions — .github/workflows/ci.yml runs lint + test on PR" -->
+
+---
+
+## Known complexity areas
+
+{{KNOWN_COMPLEXITY}}
+
+<!-- Note any areas of the codebase that are particularly complex, sensitive, or require care.
+     Example: "The auth module in src/auth/ manages token rotation — approach carefully."
+     If none known, write "None identified during initial discovery." -->
+
+---
+
+## Staleness indicators
+
+This map may be out of date if:
+- New top-level directories were added.
+- The build system or test framework changed.
+- The entry point changed.
+- More than 30 days have passed since `{{LAST_UPDATED_DATE}}`.
+
+When stale, re-run the discovery prompt to regenerate.

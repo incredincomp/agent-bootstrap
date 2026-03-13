@@ -1,0 +1,63 @@
+{
+  "_template_instructions": "Remove this field when filling. Replace all placeholder values with real evidence from the target repository. Use null for fields that are genuinely unknown. Validate against schemas/repo_discovery.schema.json.",
+  "schema_version": "1.0.0",
+  "discovery_run": {
+    "date": "{{DISCOVERY_DATE}}",
+    "agent": "{{DISCOVERY_AGENT}}",
+    "prompt_used": "{{PROMPT_USED}}",
+    "target_repo": "{{TARGET_REPO_PATH_OR_URL}}"
+  },
+  "repository": {
+    "name": "{{REPO_NAME}}",
+    "description": "{{REPO_DESCRIPTION}}",
+    "primary_language": "{{PRIMARY_LANGUAGE}}",
+    "additional_languages": ["{{ADDITIONAL_LANGUAGE_1}}"],
+    "repo_type": "{{REPO_TYPE}}"
+  },
+  "technology_stack": {
+    "build_system": "{{BUILD_SYSTEM}}",
+    "package_manager": "{{PACKAGE_MANAGER}}",
+    "dependency_file": "{{DEPENDENCY_FILE}}",
+    "runtime_version": "{{RUNTIME_VERSION}}",
+    "test_framework": "{{TEST_FRAMEWORK}}",
+    "lint_tool": "{{LINT_TOOL}}"
+  },
+  "structure": {
+    "top_level_dirs": ["{{DIR_1}}", "{{DIR_2}}", "{{DIR_3}}"],
+    "source_dir": "{{SOURCE_DIR}}",
+    "test_dir": "{{TEST_DIR}}",
+    "docs_dir": "{{DOCS_DIR}}",
+    "config_files": ["{{CONFIG_FILE_1}}", "{{CONFIG_FILE_2}}"],
+    "entry_points": ["{{ENTRY_POINT_1}}"]
+  },
+  "ci_cd": {
+    "provider": "{{CI_PROVIDER}}",
+    "config_path": "{{CI_CONFIG_PATH}}",
+    "workflows": ["{{CI_WORKFLOW_1}}"]
+  },
+  "infrastructure": {
+    "cloud_provider": "{{CLOUD_PROVIDER}}",
+    "iac_tool": "{{IAC_TOOL}}",
+    "iac_path": "{{IAC_PATH}}",
+    "deployment_target": "{{DEPLOYMENT_TARGET}}"
+  },
+  "existing_agent_files": {
+    "agents_md": "{{AGENTS_MD_STATUS}}",
+    "implementation_tracker": "{{TRACKER_STATUS}}",
+    "repo_map": "{{REPO_MAP_STATUS}}",
+    "discovery_artifact": "{{DISCOVERY_ARTIFACT_STATUS}}"
+  },
+  "documentation": {
+    "readme_quality": "{{README_QUALITY}}",
+    "docs_dir_present": "{{DOCS_DIR_PRESENT}}",
+    "architecture_docs": "{{ARCHITECTURE_DOCS}}"
+  },
+  "risk_areas": [
+    {
+      "area": "{{RISK_AREA_1}}",
+      "description": "{{RISK_AREA_1_DESCRIPTION}}",
+      "severity": "{{RISK_AREA_1_SEVERITY}}"
+    }
+  ],
+  "discovery_notes": "{{FREE_FORM_NOTES}}"
+}

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Editor
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Environment
+.env
+*.env.local

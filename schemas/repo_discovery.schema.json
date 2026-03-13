@@ -1,0 +1,250 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/agent-bootstrap/schemas/repo_discovery.schema.json",
+  "title": "RepoDiscovery",
+  "description": "Schema for artifacts/ai/repo_discovery.json — the machine-readable discovery artifact created during a bootstrap or discovery run.",
+  "type": "object",
+  "required": ["schema_version", "discovery_run", "repository"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "discovery_run": {
+      "$ref": "#/definitions/DiscoveryRun"
+    },
+    "repository": {
+      "$ref": "#/definitions/Repository"
+    },
+    "technology_stack": {
+      "$ref": "#/definitions/TechnologyStack"
+    },
+    "structure": {
+      "$ref": "#/definitions/Structure"
+    },
+    "ci_cd": {
+      "$ref": "#/definitions/CiCd"
+    },
+    "infrastructure": {
+      "$ref": "#/definitions/Infrastructure"
+    },
+    "existing_agent_files": {
+      "$ref": "#/definitions/ExistingAgentFiles"
+    },
+    "documentation": {
+      "$ref": "#/definitions/Documentation"
+    },
+    "risk_areas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RiskArea"
+      }
+    },
+    "discovery_notes": {
+      "type": ["string", "null"],
+      "description": "Free-form notes from the discovery run"
+    }
+  },
+  "definitions": {
+    "DiscoveryRun": {
+      "type": "object",
+      "required": ["date", "target_repo"],
+      "additionalProperties": true,
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "ISO 8601 date of the discovery run"
+        },
+        "agent": {
+          "type": ["string", "null"],
+          "description": "Agent name/version that performed the discovery"
+        },
+        "prompt_used": {
+          "type": ["string", "null"],
+          "description": "Prompt file used for this discovery run"
+        },
+        "target_repo": {
+          "type": "string",
+          "description": "Path or URL of the target repository",
+          "minLength": 1
+        }
+      }
+    },
+    "Repository": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": ["string", "null"]
+        },
+        "primary_language": {
+          "type": ["string", "null"]
+        },
+        "additional_languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repo_type": {
+          "type": ["string", "null"],
+          "description": "E.g., 'service', 'library', 'platform', 'infrastructure', 'extension'"
+        }
+      }
+    },
+    "TechnologyStack": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "build_system": {
+          "type": ["string", "null"]
+        },
+        "package_manager": {
+          "type": ["string", "null"]
+        },
+        "dependency_file": {
+          "type": ["string", "null"]
+        },
+        "runtime_version": {
+          "type": ["string", "null"]
+        },
+        "test_framework": {
+          "type": ["string", "null"]
+        },
+        "lint_tool": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "Structure": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "top_level_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_dir": {
+          "type": ["string", "null"]
+        },
+        "test_dir": {
+          "type": ["string", "null"]
+        },
+        "docs_dir": {
+          "type": ["string", "null"]
+        },
+        "config_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entry_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CiCd": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "provider": {
+          "type": ["string", "null"]
+        },
+        "config_path": {
+          "type": ["string", "null"]
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Infrastructure": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "cloud_provider": {
+          "type": ["string", "null"]
+        },
+        "iac_tool": {
+          "type": ["string", "null"]
+        },
+        "iac_path": {
+          "type": ["string", "null"]
+        },
+        "deployment_target": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "ExistingAgentFiles": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "agents_md": {
+          "type": ["string", "null"],
+          "description": "Status: 'present', 'absent', 'partial'"
+        },
+        "implementation_tracker": {
+          "type": ["string", "null"]
+        },
+        "repo_map": {
+          "type": ["string", "null"]
+        },
+        "discovery_artifact": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "Documentation": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "readme_quality": {
+          "type": ["string", "null"],
+          "description": "E.g., 'substantial', 'minimal', 'stub', 'absent'"
+        },
+        "docs_dir_present": {
+          "type": ["boolean", "null"]
+        },
+        "architecture_docs": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "RiskArea": {
+      "type": "object",
+      "required": ["area", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "area": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", "critical", null]
+        }
+      }
+    }
+  }
+}

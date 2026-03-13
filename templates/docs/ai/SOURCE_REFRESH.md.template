@@ -1,0 +1,108 @@
+# SOURCE_REFRESH.md — Agent Source Refresh Instructions for {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+This file explains how a new agent session should re-sync its knowledge of this repository.
+Fill every {{PLACEHOLDER}} with real evidence from the repository.
+Update this file when build commands, key files, or structure changes.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file tells an agent (or human) how to efficiently rebuild working knowledge of this repository from scratch, without relying on chat history.
+
+---
+
+## Read these files first (in order)
+
+1. `AGENTS.md` — execution contract, scope, forbidden actions
+2. `IMPLEMENTATION_TRACKER.md` — current phase, last milestone, next steps
+3. `docs/ai/REPO_MAP.md` — repository structure map
+4. `artifacts/ai/repo_discovery.json` — machine-readable discovery findings
+5. `{{PRIMARY_CONFIG_FILE}}` — {{PRIMARY_CONFIG_FILE_DESCRIPTION}}
+
+<!-- Add any repo-specific files that are unusually important to read early.
+     Example: "src/config/settings.py — all runtime configuration in one place" -->
+
+---
+
+## How to build
+
+```bash
+# Install dependencies
+{{INSTALL_COMMAND}}
+
+# Build (if applicable)
+{{BUILD_COMMAND}}
+```
+
+**Expected output:** {{BUILD_EXPECTED_OUTPUT}}
+
+---
+
+## How to test
+
+```bash
+# Run all tests
+{{TEST_COMMAND}}
+
+# Run a specific test
+{{SINGLE_TEST_COMMAND}}
+```
+
+**Expected output:** {{TEST_EXPECTED_OUTPUT}}
+
+---
+
+## How to run locally
+
+```bash
+# Start the application
+{{RUN_COMMAND}}
+```
+
+**Expected behavior:** {{RUN_EXPECTED_BEHAVIOR}}
+
+---
+
+## How to lint / format
+
+```bash
+{{LINT_COMMAND}}
+```
+
+---
+
+## Detecting staleness
+
+This source refresh document may be stale if:
+- The build command has changed (check `{{BUILD_CONFIG_FILE}}`).
+- The test framework has changed (check `{{TEST_CONFIG_FILE}}`).
+- Major new directories appear in the repo root.
+- The `IMPLEMENTATION_TRACKER.md` references files not mentioned here.
+
+If any of these are true, re-run the discovery prompt to update this file.
+
+---
+
+## Key dependencies and integrations
+
+| Dependency / Service | Role | Where configured |
+|---------------------|------|-----------------|
+| `{{DEP_1}}` | {{DEP_1_ROLE}} | `{{DEP_1_CONFIG}}` |
+| `{{DEP_2}}` | {{DEP_2_ROLE}} | `{{DEP_2_CONFIG}}` |
+
+<!-- Fill with actual dependencies discovered during inspection.
+     Focus on external services, databases, and critical libraries — not every package. -->
+
+---
+
+## Environment setup notes
+
+{{ENV_SETUP_NOTES}}
+
+<!-- Record any non-obvious setup requirements:
+     - Required environment variables (names only, not values)
+     - Required external services to be running locally
+     - Required credentials or access (names only, not values)
+     - Any known setup gotchas
+     Example: "Requires DATABASE_URL and JWT_SECRET env vars. See .env.example." -->

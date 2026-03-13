@@ -1,0 +1,168 @@
+# bootstrap-manifest.yaml
+# Machine-readable control plane for the agent-bootstrap system.
+# Version: 1.0.0
+# This file defines what a correctly bootstrapped target repo looks like,
+# what behaviors are required and forbidden, and when a bootstrap run is complete.
+
+version: "1.0.0"
+
+repo:
+  name: agent-bootstrap
+  purpose: >
+    Canonical source-of-truth repository for AI agent bootstrap scaffolding.
+    Provides prompts, templates, schemas, and a validation script for initializing
+    and operating AI-assisted target repositories.
+  type: bootstrap-source
+
+# ─────────────────────────────────────────────
+# Files required in THIS bootstrap source repo
+# ─────────────────────────────────────────────
+bootstrap_repo_required_files:
+  - README.md
+  - AGENTS.md
+  - IMPLEMENTATION_TRACKER.md
+  - bootstrap-manifest.yaml
+  - prompts/new-repo-bootstrap.md
+  - prompts/existing-repo-discovery.md
+  - prompts/resume-work.md
+  - prompts/bounded-implementation.md
+  - prompts/closeout-and-handoff.md
+  - templates/AGENTS.md.template
+  - templates/IMPLEMENTATION_TRACKER.md.template
+  - templates/bootstrap/BOOTSTRAP_SOURCE.md.template
+  - templates/docs/ai/REPO_MAP.md.template
+  - templates/docs/ai/SOURCE_REFRESH.md.template
+  - templates/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+  - templates/artifacts/ai/repo_discovery.json.template
+  - schemas/implementation_tracker.schema.json
+  - schemas/repo_discovery.schema.json
+  - scripts/validate_bootstrap.py
+
+# ─────────────────────────────────────────────
+# Files required in a bootstrapped TARGET repo
+# ─────────────────────────────────────────────
+target_repo_required_files:
+  - path: AGENTS.md
+    description: Execution contract for AI agents working in this repo
+    template: templates/AGENTS.md.template
+    must_be_repo_specific: true
+
+  - path: IMPLEMENTATION_TRACKER.md
+    description: Live state file — milestones, decisions, validation, gaps
+    template: templates/IMPLEMENTATION_TRACKER.md.template
+    must_be_repo_specific: true
+
+  - path: docs/ai/REPO_MAP.md
+    description: Human and agent-readable map of the target repository
+    template: templates/docs/ai/REPO_MAP.md.template
+    must_be_repo_specific: true
+
+  - path: docs/ai/SOURCE_REFRESH.md
+    description: Instructions for re-syncing agent knowledge of the repo
+    template: templates/docs/ai/SOURCE_REFRESH.md.template
+    must_be_repo_specific: true
+
+  - path: docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md
+    description: Vendor-specific AI knowledge relevant to this target repo
+    template: templates/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+    must_be_repo_specific: true
+
+  - path: bootstrap/BOOTSTRAP_SOURCE.md
+    description: Record of the bootstrap origin — where and when this was bootstrapped
+    template: templates/bootstrap/BOOTSTRAP_SOURCE.md.template
+    must_be_repo_specific: true
+
+  - path: artifacts/ai/repo_discovery.json
+    description: Machine-readable discovery artifact from the bootstrap run
+    template: templates/artifacts/ai/repo_discovery.json.template
+    must_be_repo_specific: true
+    validate_schema: schemas/repo_discovery.schema.json
+
+# ─────────────────────────────────────────────
+# Optional files for target repos
+# ─────────────────────────────────────────────
+target_repo_optional_files:
+  - path: docs/ai/DECISIONS.md
+    description: Persistent decision log for the target repo
+  - path: artifacts/ai/dependency_map.json
+    description: Machine-readable dependency map
+
+# ─────────────────────────────────────────────
+# Creation and update rules
+# ─────────────────────────────────────────────
+creation_rules:
+  - rule: inspect_before_create
+    description: >
+      Always inspect the target repo before creating any files.
+      Do not invent repo context. Use only evidence found during inspection.
+
+  - rule: use_templates_as_starting_points
+    description: >
+      Always copy the relevant template from this repo's templates/ directory.
+      Fill placeholders with real evidence. Do not leave generic placeholders
+      unless the information is genuinely unavailable (record the gap if so).
+
+  - rule: never_overwrite_without_review
+    description: >
+      If a required file already exists in the target repo, inspect its contents
+      before deciding to overwrite or merge. Record the decision in the tracker.
+
+  - rule: record_every_run
+    description: >
+      Every bootstrap run must update IMPLEMENTATION_TRACKER.md in the target repo
+      with the date, agent, files created or updated, and validation status.
+
+# ─────────────────────────────────────────────
+# Discovery requirements
+# ─────────────────────────────────────────────
+discovery_requirements:
+  - Identify the primary programming language(s).
+  - Identify the build system and package manager.
+  - Identify the deployment model (if determinable).
+  - Identify existing documentation structure.
+  - Identify existing CI/CD configuration.
+  - Identify authoritative configuration files.
+  - Note any agent-operating files already present.
+  - Record all findings in artifacts/ai/repo_discovery.json.
+
+# ─────────────────────────────────────────────
+# Forbidden behaviors
+# ─────────────────────────────────────────────
+forbidden_behaviors:
+  - Inventing repo history, decisions, or dependencies not found in evidence.
+  - Filling templates with made-up project-specific content.
+  - Performing unbounded refactors during a bootstrap run.
+  - Skipping the discovery step before creating operating files.
+  - Marking bootstrap complete without updating the tracker.
+  - Removing or silently renaming authoritative files.
+  - Adding external dependencies without recording the decision.
+  - Creating speculative or non-functional scaffolding code.
+
+# ─────────────────────────────────────────────
+# Required output summary expectations
+# ─────────────────────────────────────────────
+required_output_summary:
+  every_run_must_produce:
+    - List of files created and updated
+    - List of key decisions made with rationale
+    - Validation results (what was checked, what passed, what failed)
+    - List of unresolved gaps or open questions
+    - Recommended next bounded milestone
+
+  format: >
+    The summary must be written into IMPLEMENTATION_TRACKER.md in the target repo.
+    It must be readable by a future agent or human with no chat history.
+
+# ─────────────────────────────────────────────
+# Stop condition for a target-repo bootstrap run
+# ─────────────────────────────────────────────
+stop_condition:
+  description: >
+    A target-repo bootstrap run is complete when all of the following are true:
+  criteria:
+    - All target_repo_required_files are present and repo-specific (no unfilled generic placeholders).
+    - artifacts/ai/repo_discovery.json is populated with real findings.
+    - IMPLEMENTATION_TRACKER.md records the run with files, decisions, and validation status.
+    - validate_bootstrap.py (or equivalent checks) has been run and the result recorded.
+    - No forbidden behaviors were performed (confirm via self-review).
+    - The repo is resumable by a future agent with no chat history.
