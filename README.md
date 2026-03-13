@@ -33,7 +33,80 @@ This repository solves that by providing:
 
 ---
 
-## How it is meant to be used
+## Applying bootstrap to a target repo
+
+`scripts/apply_bootstrap.py` stages the canonical scaffold into a target repository.
+This is the fastest way to get a target repo ready for the discovery/bootstrap prompt.
+
+**Apply does not auto-populate repo-specific content.** It copies template files with
+their `{{PLACEHOLDER}}` markers intact. A human or agent then inspects the target repo
+and fills those placeholders with real, evidence-based content.
+
+### Example commands
+
+```bash
+# Preview what would be created (no files written):
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --dry-run
+
+# Apply the scaffold (skips files that already exist):
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+
+# Re-apply and overwrite existing files:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --force
+
+# Preview what --force would overwrite:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --dry-run --force
+```
+
+### What apply does
+
+1. Creates required directories (`docs/ai/`, `bootstrap/`, `artifacts/ai/`).
+2. Copies each canonical template to its target destination.
+3. Writes `bootstrap/BOOTSTRAP_SOURCE.md` with the bootstrap source URL, version, and date filled in.
+4. Skips any file that already exists (safe by default).
+5. Prints a summary: created / skipped / would overwrite / overwritten / errors.
+
+### What apply does NOT do
+
+- It does **not** inspect the target repo or infer repo-specific content.
+- It does **not** fill `{{PLACEHOLDER}}` markers (except the bootstrap system markers in `BOOTSTRAP_SOURCE.md`).
+- It does **not** run discovery or populate `artifacts/ai/repo_discovery.json` with real findings.
+
+### After apply: run the bootstrap prompt
+
+Once the scaffold is staged, point an agent at the target repo using one of the prompts:
+
+```
+prompts/new-repo-bootstrap.md         ← for new or empty repos
+prompts/existing-repo-discovery.md    ← for repos with existing code
+```
+
+The agent will inspect the target repo and fill all remaining `{{PLACEHOLDER}}` markers
+with evidence found in the repo.
+
+### Validate the result
+
+After the agent has populated the files:
+
+```bash
+python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
+```
+
+This checks:
+- All required files are present.
+- No unfilled `{{PLACEHOLDER}}` markers remain.
+- JSON artifacts are valid.
+
+### Apply vs bootstrap prompt — key distinction
+
+| Step | Tool | What it does |
+|------|------|--------------|
+| **Apply** | `scripts/apply_bootstrap.py` | Stages canonical file structure and skeletal templates |
+| **Bootstrap prompt / discovery** | `prompts/*.md` → agent session | Inspects target repo; fills templates with real evidence |
+
+These are two separate steps. Apply first, then run the prompt.
+
+---
 
 ### Initializing a new target repo
 
@@ -113,11 +186,13 @@ Inspect → Document → Bound → Validate → Record
 ## Quick-start
 
 ```bash
-# From an agent session, point at a new target repo:
-# 1. Open prompts/new-repo-bootstrap.md
-# 2. Paste into your agent with: "Target repo: <path or URL>"
-# 3. Agent creates operating files in target repo
-# 4. Validate:
+# Stage the bootstrap scaffold into a target repo:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+
+# Then run the bootstrap prompt (new repo) or discovery prompt (existing repo)
+# against the target repo to fill in the content.
+
+# Validate after the agent has populated the files:
 python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 ```
 
@@ -157,7 +232,8 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 │  ├─ implementation_tracker.schema.json
 │  └─ repo_discovery.schema.json
 └─ scripts/
-   └─ validate_bootstrap.py           ← lightweight validation script
+   ├─ validate_bootstrap.py           ← lightweight validation script
+   └─ apply_bootstrap.py              ← scaffold apply script
 ```
 
 ---

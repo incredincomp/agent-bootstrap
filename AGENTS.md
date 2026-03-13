@@ -21,6 +21,7 @@ In scope:
 - Templates for required target-repo operating files
 - JSON schemas for structured artifacts
 - A lightweight validation script
+- A scaffold apply script for staging templates into target repos
 - Documentation explaining the system
 - The implementation tracker for this repo's own state
 
@@ -29,6 +30,31 @@ Out of scope:
 - Full CLI tooling or package publishing
 - CI/CD automation beyond what is required to validate bootstrap files
 - Language-specific application code
+
+---
+
+## Operational surfaces
+
+This repository has two operational surfaces:
+
+1. **Bootstrap source validation** — confirms that this repo's own required files
+   are present and intact.
+   ```
+   python scripts/validate_bootstrap.py
+   ```
+
+2. **Target repo scaffold application** — stages canonical template files into a
+   target repository so an agent can populate them with real, evidence-based content.
+   ```
+   python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+   ```
+
+The apply script is **safe by default**: it never overwrites existing files unless
+`--force` is passed explicitly. Always run with `--dry-run` first when unsure.
+
+Target-repo content population (filling `{{PLACEHOLDER}}` markers) remains
+**agent-led and evidence-driven**. The apply script does not auto-fill repo-specific
+content. Run the appropriate prompt after apply.
 
 ---
 
