@@ -1,0 +1,9 @@
+# placeholder.tfvars.example
+# Example Terraform variable definitions for the dev environment.
+# Copy this file to terraform.tfvars and fill in real values before running terraform apply.
+# Do NOT commit terraform.tfvars to version control.
+
+# Example variables (replace with real values for your environment):
+# region     = "us-east-1"
+# project_id = "my-project-dev"
+# owner_tag  = "platform-team"

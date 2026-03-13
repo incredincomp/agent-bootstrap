@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 8 complete — Target Repo Apply Path**
+**Phase: Milestone 9 complete — End-to-End Fixtures and Bootstrap Self-Test Harness**
 
 ---
 
@@ -29,6 +29,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 6 | Closeout | ✅ Complete | Tracker updated; README verified; validation recorded below |
 | 7 | Dogfood and tighten | ✅ Complete | Validated bootstrap against itself; fixed `--target-dir` gap; strengthened prompts and templates |
 | 8 | Target Repo Apply Path | ✅ Complete | `apply_bootstrap.py` created; manifest, README, AGENTS.md updated |
+| 9 | End-to-End Fixtures and Self-Test Harness | ✅ Complete | 2 fixture repos, population data, self-test runner; both fixtures B:PASS C:PASS |
 
 ---
 
@@ -89,7 +90,47 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
-## Files created/modified in Milestone 8 (target repo apply path)
+## Decisions made in Milestone 9 (end-to-end fixtures and self-test harness)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| Two fixture shapes (Python service + infra/docs) | Proves bootstrap works on distinct repo shapes: code-oriented vs docs/infra-oriented | Single fixture (rejected: insufficient coverage) |
+| Population JSON uses flat `placeholder_values` dict | Simple and explicit; maps placeholder names to values; applies globally to all checked files | Per-file replacement or full file overrides (deferred: overkill for this use case; `file_overrides` key exists for future use) |
+| `{{PLACEHOLDER}}` meta-marker mapped to empty string in population data | The marker appears in template instruction comments; replacing with "" removes it cleanly | Leaving it unfilled (rejected: would cause State C validation to fail) |
+| Self-test runner copies fixtures to temp working dirs | Canonical fixture sources must never be mutated during tests; temp dirs are auto-cleaned | In-place mutation (rejected: would corrupt canonical fixtures) |
+| State B expected to FAIL validation | Proves apply staged the scaffold correctly but left placeholders for agent population | Requiring State B to pass (rejected: would require pre-filling placeholders, defeating purpose) |
+| No heavy test framework; pure Python stdlib | Keeps the harness dependency-free and readable; consistent with validate_bootstrap.py and apply_bootstrap.py | pytest (deferred: adds install step; stdlib subprocess is sufficient) |
+| `run_fixture_selftest.py` required in BOOTSTRAP_REPO_REQUIRED_FILES | Prevents drift where the harness exists but isn't tracked as required | Not required (rejected: would allow silent deletion) |
+
+---
+
+## Files created/modified in Milestone 9 (end-to-end fixtures and self-test harness)
+
+### fixtures/ (new directory)
+- `fixtures/README.md` — fixture documentation: purpose, states, usage, update guidance
+- `fixtures/targets/minimal-python-service/README.md` — fixture overview
+- `fixtures/targets/minimal-python-service/pyproject.toml` — project metadata
+- `fixtures/targets/minimal-python-service/src/app.py` — minimal Flask HTTP service
+- `fixtures/targets/minimal-python-service/tests/test_smoke.py` — smoke tests
+- `fixtures/targets/minimal-infra-repo/README.md` — fixture overview
+- `fixtures/targets/minimal-infra-repo/docs/architecture.md` — architecture doc
+- `fixtures/targets/minimal-infra-repo/environments/dev/placeholder.tfvars.example` — example Terraform vars
+- `fixtures/population/minimal-python-service.json` — State C proof data (116 placeholder values)
+- `fixtures/population/minimal-infra-repo.json` — State C proof data (116 placeholder values)
+
+### scripts/
+- `scripts/run_fixture_selftest.py` — new; end-to-end self-test harness
+
+### Root
+- `AGENTS.md` — added third operational surface; added fixture and self-test rules section
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 9 recorded
+- `bootstrap-manifest.yaml` — added new required files; added `fixtures:` section
+- `README.md` — added fixtures/self-test section; updated repository layout
+- `scripts/validate_bootstrap.py` — added 6 new files to `BOOTSTRAP_REPO_REQUIRED_FILES`
+
+---
+
+
 
 ### scripts/
 - `scripts/apply_bootstrap.py` — new; manifest-driven scaffold apply script
@@ -134,6 +175,12 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | apply_bootstrap.py --force --dry-run | ✅ Pass | All 7 shown as [WOULD OVERWRITE]; exits 0 |
 | validate_bootstrap.py on applied target | ✅ Pass | Required files present; placeholder failures expected (agent fills them) |
 | validate_bootstrap.py on bootstrap source repo | ✅ Pass | All required files including apply_bootstrap.py detected |
+| run_fixture_selftest.py syntax check | ✅ Pass | `python -m py_compile scripts/run_fixture_selftest.py` |
+| Self-test: minimal-python-service State B | ✅ Pass | 7 files created; 140 unfilled placeholders detected (expected) |
+| Self-test: minimal-python-service State C | ✅ Pass | All 14 checks passed; 0 unfilled placeholders |
+| Self-test: minimal-infra-repo State B | ✅ Pass | 7 files created; 140 unfilled placeholders detected (expected) |
+| Self-test: minimal-infra-repo State C | ✅ Pass | All 14 checks passed; 0 unfilled placeholders |
+| Full self-test run | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0; B:PASS C:PASS for both fixtures |
 
 ---
 
@@ -141,25 +188,26 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
 - [x] Add `scripts/apply_bootstrap.py` to stage scaffold into target repos safely ✅ Done (Milestone 8)
+- [x] Add end-to-end fixture self-test harness ✅ Done (Milestone 9)
 - [ ] Add a `jsonschema`-based validation mode (optional, behind `--strict` flag)
-- [ ] Add a GitHub Actions workflow to run validate_bootstrap.py on push
+- [ ] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [ ] Consider adding a `CHANGELOG.md` when this repo has meaningful version history
 - [ ] Add CODEOWNERS or similar if this becomes a shared team resource
+- [ ] Make `apply_bootstrap.py` fully read template mappings from `bootstrap-manifest.yaml`
+  rather than the static fallback list (currently in sync; unifying reduces future drift)
 
 ---
 
 ## Next strongest bounded milestone
 
-**Milestone 9 — Manifest-driven apply and validation coherence**
+**Milestone 10 — GitHub Actions CI workflow**
 
 Scope:
-- Make `apply_bootstrap.py` fully read its template mappings from `bootstrap-manifest.yaml`
-  rather than the static fallback list (the two are currently in sync; unifying reduces drift)
-- Add `--bootstrap-version` auto-detection from manifest version field as fallback
-- Validate that `bootstrap/BOOTSTRAP_SOURCE.md` in a target repo contains no
-  bootstrap-system placeholders after apply (currently `{{BOOTSTRAP_NOTES}}` remains)
-- Optionally add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
+- Add a `.github/workflows/ci.yml` that runs `validate_bootstrap.py` and
+  `run_fixture_selftest.py` on every push and pull request to main
+- Ensures the bootstrap source repo stays intact and fixtures pass on every change
+- No heavy dependencies; Python stdlib only; fast workflow (< 1 min)
 
-Estimated size: Small (2–3 files modified)
+Estimated size: Small (1 file: `.github/workflows/ci.yml`)
