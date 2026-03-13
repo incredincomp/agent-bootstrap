@@ -54,6 +54,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "scripts/validate_bootstrap.py",
     "scripts/apply_bootstrap.py",
     "scripts/run_fixture_selftest.py",
+    "scripts/refresh_bootstrap.py",
     "fixtures/targets/minimal-python-service/README.md",
     "fixtures/targets/minimal-python-service/conftest.py",
     "fixtures/targets/minimal-infra-repo/README.md",

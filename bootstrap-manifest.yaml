@@ -39,6 +39,7 @@ bootstrap_repo_required_files:
   - scripts/validate_bootstrap.py
   - scripts/apply_bootstrap.py
   - scripts/run_fixture_selftest.py
+  - scripts/refresh_bootstrap.py
   - fixtures/targets/minimal-python-service/README.md
   - fixtures/targets/minimal-python-service/conftest.py
   - fixtures/targets/minimal-infra-repo/README.md
@@ -211,6 +212,58 @@ apply:
     - BOOTSTRAP_DATE
     - BOOTSTRAP_AGENT
     - BOOTSTRAP_PROMPT_USED
+
+# ─────────────────────────────────────────────
+# Refresh / upgrade path configuration
+# Drives scripts/refresh_bootstrap.py behavior
+# ─────────────────────────────────────────────
+refresh:
+  script: scripts/refresh_bootstrap.py
+  bootstrap_marker: bootstrap/BOOTSTRAP_SOURCE.md
+  dry_run_supported: true
+  force_supported: true
+
+  # Default behavior is safe — populated files are never overwritten without --force.
+  default_safe: true
+
+  # Per-file refresh classification policies.
+  # safe-if-unpopulated : refresh when file still has unfilled {{PLACEHOLDER}} markers
+  # manual-review       : populated repo-specific file; skip by default
+  # marker              : bootstrap origin marker; rendered before comparison
+  file_policies:
+    - destination: AGENTS.md
+      refresh_policy: safe-if-unpopulated
+      reason: Structural scaffold; safe to update if agent has not yet populated it
+
+    - destination: IMPLEMENTATION_TRACKER.md
+      refresh_policy: manual-review
+      reason: Always populated immediately; contains live project state
+
+    - destination: docs/ai/REPO_MAP.md
+      refresh_policy: safe-if-unpopulated
+      reason: Structural scaffold; safe to update if agent has not yet populated it
+
+    - destination: docs/ai/SOURCE_REFRESH.md
+      refresh_policy: safe-if-unpopulated
+      reason: Structural scaffold; safe to update if agent has not yet populated it
+
+    - destination: docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md
+      refresh_policy: safe-if-unpopulated
+      reason: Structural scaffold; safe to update if agent has not yet populated it
+
+    - destination: bootstrap/BOOTSTRAP_SOURCE.md
+      refresh_policy: marker
+      reason: Bootstrap origin marker; bootstrap-system fields refreshed automatically
+
+    - destination: artifacts/ai/repo_discovery.json
+      refresh_policy: manual-review
+      reason: Always populated during bootstrap; contains real discovery findings
+
+  # Classification outcomes and their default actions:
+  #   missing       → created (always safe)
+  #   unchanged     → skipped (already current)
+  #   safe-refresh  → refreshed (template updated; no local content to lose)
+  #   populated     → skipped and flagged (requires --force to overwrite)
 
 # ─────────────────────────────────────────────
 # End-to-end fixture self-test configuration

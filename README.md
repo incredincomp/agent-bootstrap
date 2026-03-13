@@ -108,6 +108,90 @@ These are two separate steps. Apply first, then run the prompt.
 
 ---
 
+## Refreshing an already-bootstrapped target repo
+
+`scripts/refresh_bootstrap.py` upgrades an already-bootstrapped target repository
+to align with the current canonical bootstrap source templates.
+
+**Refresh is safe by default.** It never blindly overwrites repo-specific populated
+content. It classifies each managed file before taking action.
+
+### When to use refresh vs apply
+
+| Situation | Tool |
+|-----------|------|
+| Target repo has never been bootstrapped | `scripts/apply_bootstrap.py` |
+| Target repo was bootstrapped before; templates have been updated | `scripts/refresh_bootstrap.py` |
+| Checking status of a bootstrapped repo | `scripts/refresh_bootstrap.py --dry-run` |
+
+### File classifications
+
+| Classification | Meaning | Default action |
+|----------------|---------|----------------|
+| `missing` | File not present in target | Created |
+| `unchanged` | File matches current template exactly | Skipped (already current) |
+| `safe-refresh` | File differs from template but still has unfilled `{{PLACEHOLDER}}` markers | Refreshed (template updated; no local content to lose) |
+| `populated` | File has been filled with real content (no remaining placeholders) | **Skipped** — flagged for manual review |
+
+### Example commands
+
+```bash
+# Preview what would change (no files written):
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo --dry-run
+
+# Run refresh (safe defaults — skips populated files):
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo
+
+# Preview what --force would overwrite (including populated files):
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo --dry-run --force
+
+# Refresh and overwrite even populated files (destructive — use with care):
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo --force
+```
+
+### What refresh does
+
+1. Detects whether the target repo was previously bootstrapped (checks for `bootstrap/BOOTSTRAP_SOURCE.md`).
+2. Reads the prior bootstrap version and date from the marker if present.
+3. Classifies each managed file (`missing`, `unchanged`, `safe-refresh`, or `populated`).
+4. Creates missing files and refreshes unpopulated scaffold files by default.
+5. Skips files that have been populated with real content (no remaining `{{PLACEHOLDER}}` markers).
+6. Prints a summary of all classifications and actions taken.
+
+### What refresh does NOT do
+
+- It does **not** blindly overwrite populated files (unless `--force` is given).
+- It does **not** auto-merge repo-specific content with template changes.
+- It does **not** replace the agent population step — manually review flagged files.
+
+### Recommended workflow before and after refresh
+
+```bash
+# 1. Preview the impact (always start here):
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo --dry-run
+
+# 2. Review which files would be skipped (populated) vs refreshed.
+#    For populated files, manually compare them to the updated template.
+
+# 3. Run the refresh:
+python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo
+
+# 4. Re-populate any refreshed files that need updated content.
+
+# 5. Validate the final state:
+python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
+```
+
+### Apply vs refresh vs validate — key distinction
+
+| Step | Tool | What it does |
+|------|------|--------------|
+| **Apply** | `scripts/apply_bootstrap.py` | Stages canonical file structure into a fresh target repo |
+| **Refresh** | `scripts/refresh_bootstrap.py` | Updates managed files in an existing bootstrapped repo (safe by default) |
+| **Validate** | `scripts/validate_bootstrap.py` | Checks file presence, placeholder completion, and JSON validity |
+
+---
+
 ### Initializing a new target repo
 
 1. Clone or reference this repository.
@@ -358,8 +442,13 @@ that failed to identify which check broke.
 - Broken or invalid JSON schemas and templates
 - `apply_bootstrap.py` failures (scaffold apply path)
 - `validate_bootstrap.py` failures (validation path)
-- Fixture self-test failures (State B or State C)
+- Fixture self-test failures (State B, State C, or State D refresh)
 - Python syntax errors in any of the three scripts
+
+> **Note for maintainers:** After merging changes that update the CI workflow or add new
+> scripts, confirm that GitHub Actions is actually firing on subsequent pushes and pull
+> requests by checking the Actions tab in the repository. The workflow was added in
+> Milestone 10 and should run automatically for all branches.
 
 ---
 
