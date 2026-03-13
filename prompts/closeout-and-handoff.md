@@ -26,11 +26,18 @@ For each milestone executed in this session:
 ### Step 2 — Run full validation
 
 Execute validation:
-1. Run `scripts/validate_bootstrap.py` (or the equivalent for the target repo).
+1. Run `scripts/validate_bootstrap.py --target-dir <path>` if validating a target repo, or `scripts/validate_bootstrap.py` for the bootstrap source repo itself. Record the result.
 2. Run any existing tests in the repo: record the command and result.
 3. Run the linter or formatter if configured: record the command and result.
-4. Confirm no unfilled `{{PLACEHOLDER}}` markers remain in files created or modified this session.
-5. Validate any JSON artifacts against their schemas.
+4. Confirm no unfilled `{{PLACEHOLDER}}` markers remain in files created or modified this session:
+   ```bash
+   grep -rn '{{' AGENTS.md IMPLEMENTATION_TRACKER.md docs/ai/ bootstrap/ artifacts/ai/
+   # Expected: no output. Any output indicates unfilled placeholders.
+   ```
+5. Validate any JSON artifacts against their schemas:
+   ```bash
+   python -m json.tool artifacts/ai/repo_discovery.json > /dev/null && echo "Valid JSON"
+   ```
 
 Record every validation result — pass and fail — in the tracker. Do not skip failed validations; record them as open gaps instead.
 

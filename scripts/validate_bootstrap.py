@@ -3,11 +3,13 @@
 validate_bootstrap.py
 
 Validates that the agent-bootstrap source repository contains all required files.
-Optionally checks that JSON schema files are valid JSON.
+Can also validate a bootstrapped target repository for required files, unfilled
+placeholders, and valid JSON artifacts.
 
 Usage:
     python scripts/validate_bootstrap.py
     python scripts/validate_bootstrap.py --repo-dir /path/to/bootstrap-repo
+    python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
     python scripts/validate_bootstrap.py --verbose
     python scripts/validate_bootstrap.py --check-json
 
@@ -19,7 +21,13 @@ Exit codes:
 import argparse
 import json
 import os
+import re
 import sys
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regex that matches unfilled template placeholders, e.g. {{REPO_NAME}}
+# ─────────────────────────────────────────────────────────────────────────────
+PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Required files for the bootstrap SOURCE repository (this repo)
@@ -53,6 +61,34 @@ JSON_FILES_TO_VALIDATE = [
     "templates/artifacts/ai/repo_discovery.json.template",
 ]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Required files in a BOOTSTRAPPED TARGET repository
+# ─────────────────────────────────────────────────────────────────────────────
+TARGET_REPO_REQUIRED_FILES = [
+    "AGENTS.md",
+    "IMPLEMENTATION_TRACKER.md",
+    "docs/ai/REPO_MAP.md",
+    "docs/ai/SOURCE_REFRESH.md",
+    "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md",
+    "bootstrap/BOOTSTRAP_SOURCE.md",
+    "artifacts/ai/repo_discovery.json",
+]
+
+# Target-repo files that must have no unfilled {{PLACEHOLDER}} markers
+TARGET_REPO_PLACEHOLDER_FILES = [
+    "AGENTS.md",
+    "IMPLEMENTATION_TRACKER.md",
+    "docs/ai/REPO_MAP.md",
+    "docs/ai/SOURCE_REFRESH.md",
+    "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md",
+    "bootstrap/BOOTSTRAP_SOURCE.md",
+]
+
+# Target-repo JSON artifacts that must be valid JSON
+TARGET_REPO_JSON_FILES = [
+    "artifacts/ai/repo_discovery.json",
+]
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -62,6 +98,15 @@ def parse_args():
         "--repo-dir",
         default=None,
         help="Path to the bootstrap repo root. Defaults to the directory containing this script's parent.",
+    )
+    parser.add_argument(
+        "--target-dir",
+        default=None,
+        help=(
+            "Path to a bootstrapped target repository. "
+            "Validates required files, unfilled placeholders, and JSON artifacts. "
+            "When provided, --repo-dir is ignored."
+        ),
     )
     parser.add_argument(
         "--verbose",
@@ -89,12 +134,12 @@ def find_repo_dir(script_path):
     return os.path.dirname(scripts_dir)
 
 
-def check_required_files(repo_dir, verbose):
+def check_required_files(repo_dir, file_list, verbose):
     """Check that all required files exist. Returns (pass_count, fail_count, failures)."""
     failures = []
     pass_count = 0
 
-    for rel_path in BOOTSTRAP_REPO_REQUIRED_FILES:
+    for rel_path in file_list:
         full_path = os.path.join(repo_dir, rel_path)
         if os.path.isfile(full_path):
             pass_count += 1
@@ -119,8 +164,7 @@ def check_json_files(repo_dir, verbose):
             continue
         try:
             with open(full_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            json.loads(content)
+                json.load(f)
             pass_count += 1
             if verbose:
                 print(f"  [PASS] Valid JSON: {rel_path}")
@@ -131,9 +175,113 @@ def check_json_files(repo_dir, verbose):
     return pass_count, len(failures), failures
 
 
+def check_json_file_list(repo_dir, file_list, verbose):
+    """Check that a given list of JSON files are valid JSON. Returns (pass_count, fail_count, failures)."""
+    failures = []
+    pass_count = 0
+
+    for rel_path in file_list:
+        full_path = os.path.join(repo_dir, rel_path)
+        if not os.path.isfile(full_path):
+            continue
+        try:
+            with open(full_path, "r", encoding="utf-8") as f:
+                json.load(f)
+            pass_count += 1
+            if verbose:
+                print(f"  [PASS] Valid JSON: {rel_path}")
+        except json.JSONDecodeError as exc:
+            failures.append((rel_path, str(exc)))
+            print(f"  [FAIL] Invalid JSON in {rel_path}: {exc}")
+
+    return pass_count, len(failures), failures
+
+
+def check_placeholders(repo_dir, file_list, verbose):
+    """Check that no files contain unfilled {{PLACEHOLDER}} markers.
+    Returns (pass_count, fail_count, failures). Reads files line-by-line to
+    avoid loading very large files entirely into memory."""
+    failures = []
+    pass_count = 0
+
+    for rel_path in file_list:
+        full_path = os.path.join(repo_dir, rel_path)
+        if not os.path.isfile(full_path):
+            # Missing files are caught by check_required_files; skip here
+            continue
+        found = []
+        with open(full_path, "r", encoding="utf-8") as f:
+            for line in f:
+                found.extend(PLACEHOLDER_RE.findall(line))
+        if found:
+            unique = sorted(set(found))
+            failures.append((rel_path, unique))
+            print(f"  [FAIL] Unfilled placeholders in {rel_path}: {', '.join(unique)}")
+        else:
+            pass_count += 1
+            if verbose:
+                print(f"  [PASS] No unfilled placeholders: {rel_path}")
+
+    return pass_count, len(failures), failures
+
+
 def main():
     args = parse_args()
 
+    # ── Target-repo validation mode ────────────────────────────────────────
+    if args.target_dir:
+        target_dir = os.path.abspath(args.target_dir)
+        print(f"Validating bootstrapped target repository: {target_dir}")
+        print()
+
+        total_pass = 0
+        total_fail = 0
+
+        print("=== Required file check ===")
+        p, f, _ = check_required_files(target_dir, TARGET_REPO_REQUIRED_FILES, args.verbose)
+        total_pass += p
+        total_fail += f
+        if f == 0:
+            print(f"  All {p} required files present.")
+        else:
+            print(f"  {p} passed, {f} missing.")
+        print()
+
+        print("=== Placeholder check ===")
+        p, f, _ = check_placeholders(target_dir, TARGET_REPO_PLACEHOLDER_FILES, args.verbose)
+        total_pass += p
+        total_fail += f
+        if f == 0:
+            print(f"  All {p} checked files have no unfilled placeholders.")
+        else:
+            print(f"  {p} passed, {f} have unfilled placeholders.")
+        print()
+
+        if args.check_json:
+            print("=== JSON validity check ===")
+            p, f, _ = check_json_file_list(target_dir, TARGET_REPO_JSON_FILES, args.verbose)
+            total_pass += p
+            total_fail += f
+            if f == 0:
+                print(f"  All {p} JSON files are valid.")
+            else:
+                print(f"  {p} passed, {f} invalid.")
+            print()
+
+        print("=== Summary ===")
+        print(f"  Passed: {total_pass}")
+        print(f"  Failed: {total_fail}")
+
+        if total_fail > 0:
+            print()
+            print("TARGET VALIDATION FAILED. Fix the issues above before declaring bootstrap complete.")
+            sys.exit(1)
+        else:
+            print()
+            print("TARGET VALIDATION PASSED. Bootstrapped target repository is complete.")
+            sys.exit(0)
+
+    # ── Bootstrap source repo validation mode ─────────────────────────────
     repo_dir = args.repo_dir if args.repo_dir else find_repo_dir(sys.argv[0])
     repo_dir = os.path.abspath(repo_dir)
 
@@ -145,7 +293,7 @@ def main():
 
     # ── Check 1: Required files ────────────────────────────────────────────
     print("=== Required file check ===")
-    p, f, _ = check_required_files(repo_dir, args.verbose)
+    p, f, _ = check_required_files(repo_dir, BOOTSTRAP_REPO_REQUIRED_FILES, args.verbose)
     total_pass += p
     total_fail += f
     if f == 0:

@@ -44,8 +44,15 @@ Update this file at every milestone boundary. Do not let it go stale.
 | Decision | Reason | Alternative considered |
 |----------|--------|----------------------|
 | {{DECISION_1}} | {{DECISION_1_REASON}} | {{DECISION_1_ALTERNATIVE}} |
+| {{DECISION_2}} | {{DECISION_2_REASON}} | {{DECISION_2_ALTERNATIVE}} |
 
-<!-- Record every significant decision here. This is the primary mechanism for preventing future agents from re-litigating settled questions. -->
+<!-- Record EVERY significant decision here — not just the first one.
+     This is the primary mechanism for preventing future agents from re-litigating settled questions.
+     A decision is significant if a future agent might reasonably do something different.
+     Examples:
+       | Use pyproject.toml as single source of truth for deps | Replaces requirements.txt + setup.py duplication | requirements.txt only (rejected: fragmented) |
+       | No direct commits to main | Enforces review discipline | Feature flags (deferred) |
+     Add rows as decisions are made across all milestones. -->
 
 ---
 
@@ -68,9 +75,9 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 | Check | Result | Method | Date |
 |-------|--------|--------|------|
-| Required bootstrap files present | {{VALIDATION_RESULT}} | `scripts/validate_bootstrap.py` or manual check | {{VALIDATION_DATE}} |
-| No unfilled placeholders | {{PLACEHOLDER_CHECK}} | grep for `{{` in created files | {{PLACEHOLDER_CHECK_DATE}} |
-| `artifacts/ai/repo_discovery.json` valid JSON | {{JSON_VALID}} | `python -m json.tool` | {{JSON_DATE}} |
+| Required bootstrap files present | {{VALIDATION_RESULT}} | `python scripts/validate_bootstrap.py --target-dir .` | {{VALIDATION_DATE}} |
+| No unfilled placeholders | {{PLACEHOLDER_CHECK}} | `grep -rn '{{' AGENTS.md IMPLEMENTATION_TRACKER.md docs/ai/ bootstrap/ artifacts/ai/` | {{PLACEHOLDER_CHECK_DATE}} |
+| `artifacts/ai/repo_discovery.json` valid JSON | {{JSON_VALID}} | `python -m json.tool artifacts/ai/repo_discovery.json` | {{JSON_DATE}} |
 | Tests passing | {{TESTS_RESULT}} | `{{TEST_COMMAND}}` | {{TESTS_DATE}} |
 
 ---
