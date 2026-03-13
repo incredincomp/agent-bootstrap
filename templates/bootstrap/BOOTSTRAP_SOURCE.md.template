@@ -1,0 +1,53 @@
+# BOOTSTRAP_SOURCE.md
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+This file records the origin of the bootstrap for this repository.
+Fill every {{PLACEHOLDER}} with real values from the bootstrap run.
+Do not invent dates, agent identities, or source details.
+-->
+
+This file records where and when this repository was bootstrapped.
+
+---
+
+## Bootstrap origin
+
+| Field | Value |
+|-------|-------|
+| Bootstrap source repository | {{BOOTSTRAP_SOURCE_REPO}} |
+| Bootstrap source version | {{BOOTSTRAP_SOURCE_VERSION}} |
+| Bootstrap date | {{BOOTSTRAP_DATE}} |
+| Agent / operator | {{BOOTSTRAP_AGENT}} |
+| Prompt used | {{BOOTSTRAP_PROMPT_USED}} |
+
+<!-- BOOTSTRAP_SOURCE_REPO: URL or path to the agent-bootstrap repository used.
+     BOOTSTRAP_SOURCE_VERSION: Git commit SHA or tag of the bootstrap source.
+     BOOTSTRAP_DATE: ISO 8601 date (e.g., 2024-01-15).
+     BOOTSTRAP_AGENT: Name/version of the AI agent, or "Human" if manual.
+     BOOTSTRAP_PROMPT_USED: Which prompt file was used (e.g., prompts/new-repo-bootstrap.md). -->
+
+---
+
+## Files created by bootstrap
+
+- `AGENTS.md`
+- `IMPLEMENTATION_TRACKER.md`
+- `docs/ai/REPO_MAP.md`
+- `docs/ai/SOURCE_REFRESH.md`
+- `docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md`
+- `bootstrap/BOOTSTRAP_SOURCE.md` (this file)
+- `artifacts/ai/repo_discovery.json`
+
+<!-- Add or remove files to match what was actually created. -->
+
+---
+
+## Bootstrap notes
+
+{{BOOTSTRAP_NOTES}}
+
+<!-- Record any relevant notes about the bootstrap run:
+     - Was the repo new or existing?
+     - Were any files already present?
+     - Were any steps skipped or deferred?
+     - Were any decisions made that future agents should know about? -->

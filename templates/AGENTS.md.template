@@ -1,0 +1,140 @@
+# AGENTS.md — Execution Contract for {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+Fill every {{PLACEHOLDER}} with real evidence from this repository.
+Do not leave generic content. Every section must reflect this specific repo.
+Use the existing-repo-discovery prompt or inspect the repo directly before filling this file.
+-->
+
+This file is the operating contract for AI agents working in **this repository**.
+Read it before taking any action. Deviate from it only with explicit justification recorded in `IMPLEMENTATION_TRACKER.md`.
+
+---
+
+## Repo mission
+
+{{REPO_MISSION_STATEMENT}}
+
+<!-- Example: "This repository implements the payments microservice for the Acme platform. It exposes a REST API consumed by the checkout frontend." -->
+
+---
+
+## Technology stack
+
+- **Language(s):** {{PRIMARY_LANGUAGE}}
+- **Build system:** {{BUILD_SYSTEM}}
+- **Package manager:** {{PACKAGE_MANAGER}}
+- **Test framework:** {{TEST_FRAMEWORK}}
+- **Runtime version:** {{RUNTIME_VERSION}}
+
+---
+
+## Scope of this repository
+
+In scope:
+{{IN_SCOPE_ITEMS}}
+
+Out of scope:
+{{OUT_OF_SCOPE_ITEMS}}
+
+<!-- Be specific. Example in-scope: "REST API handlers, database models, integration tests."
+     Example out-of-scope: "Frontend code, infrastructure provisioning, CI/CD pipeline changes." -->
+
+---
+
+## Authoritative files
+
+These files define the state and rules of this repository:
+
+| File | Role |
+|------|------|
+| `AGENTS.md` | This file — execution contract |
+| `IMPLEMENTATION_TRACKER.md` | Live state, milestones, decisions |
+| `{{PRIMARY_CONFIG_FILE}}` | {{PRIMARY_CONFIG_FILE_DESCRIPTION}} |
+| `{{SECONDARY_CONFIG_FILE}}` | {{SECONDARY_CONFIG_FILE_DESCRIPTION}} |
+
+<!-- Add rows for any additional authoritative configuration or lock files. -->
+
+---
+
+## Key commands
+
+```bash
+# Install dependencies
+{{INSTALL_COMMAND}}
+
+# Build
+{{BUILD_COMMAND}}
+
+# Run tests
+{{TEST_COMMAND}}
+
+# Lint / format
+{{LINT_COMMAND}}
+
+# Run locally
+{{RUN_COMMAND}}
+```
+
+<!-- Fill with actual commands from the repo's README, Makefile, or CI config. -->
+
+---
+
+## Forbidden actions
+
+Do not:
+- {{FORBIDDEN_ACTION_1}}
+- {{FORBIDDEN_ACTION_2}}
+- Modify files outside the declared milestone scope without recording the decision.
+- Add or upgrade dependencies without recording the rationale in the tracker.
+- Remove or rename authoritative files without updating all cross-references.
+- Mark milestones complete without running validation.
+- Invent repo history, architecture, or decisions not supported by evidence.
+
+<!-- Add repo-specific forbidden actions. Examples:
+     "Do not modify the generated client in src/generated/ directly — regenerate from the OpenAPI spec."
+     "Do not commit secrets or API keys." -->
+
+---
+
+## Change discipline
+
+Before making any change:
+1. Confirm the change is within the declared milestone scope.
+2. Read the files you plan to modify.
+3. Record significant decisions in `IMPLEMENTATION_TRACKER.md`.
+
+After making any change:
+1. Update `IMPLEMENTATION_TRACKER.md`.
+2. Run the test suite for the affected area.
+3. Confirm no unrelated tests were broken.
+
+---
+
+## Validation expectations
+
+Every agent session must:
+- Run `{{TEST_COMMAND}}` before declaring work complete.
+- Run `{{LINT_COMMAND}}` and resolve any new warnings.
+- Confirm `IMPLEMENTATION_TRACKER.md` is updated.
+- Note validation results in the tracker.
+
+---
+
+## How to handle uncertainty
+
+1. Consult `IMPLEMENTATION_TRACKER.md` for prior decisions.
+2. Consult `docs/ai/REPO_MAP.md` for structure guidance.
+3. If still uncertain, record the uncertainty in the tracker rather than guessing.
+4. Label recommendations as recommendations, not confirmed facts.
+
+---
+
+## Loop-breaking expectations
+
+If you repeat the same failed approach more than twice:
+1. Stop.
+2. Choose a simpler path.
+3. Record the loop-break decision in `IMPLEMENTATION_TRACKER.md`.
+
+Prefer stable, working changes over clever ones.

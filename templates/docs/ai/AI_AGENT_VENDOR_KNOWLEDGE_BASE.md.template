@@ -1,0 +1,89 @@
+# AI Agent Vendor Knowledge Base — {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+This file records vendor-specific AI and platform knowledge relevant to this repository.
+Fill based on actual evidence from the repo (imports, config files, API usage, README).
+If a section is not applicable, write "Not applicable — [reason]" rather than deleting the section.
+Do not speculate about APIs or SDKs not actually used in this repo.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file captures vendor-specific knowledge that an AI agent needs to work effectively in this repository. It is intended to prevent agents from using stale or incorrect assumptions about external APIs, SDKs, and platforms.
+
+---
+
+## AI / ML frameworks in use
+
+| Framework / SDK | Version | Purpose | Key files |
+|----------------|---------|---------|-----------|
+| `{{AI_FRAMEWORK_1}}` | `{{AI_FRAMEWORK_1_VERSION}}` | {{AI_FRAMEWORK_1_PURPOSE}} | `{{AI_FRAMEWORK_1_KEY_FILES}}` |
+
+<!-- If no AI/ML frameworks are used, write:
+     "Not applicable — this repository does not use AI/ML frameworks directly." -->
+
+---
+
+## External AI APIs
+
+| API | Provider | Usage | Auth method | Config location |
+|-----|----------|-------|-------------|----------------|
+| `{{AI_API_1}}` | `{{AI_API_1_PROVIDER}}` | {{AI_API_1_USAGE}} | {{AI_API_1_AUTH}} | `{{AI_API_1_CONFIG}}` |
+
+<!-- Example:
+     | OpenAI Chat Completions | OpenAI | Generates summaries in src/summarizer.py | API key via env var OPENAI_API_KEY | .env.example |
+     If no external AI APIs are used, write "Not applicable." -->
+
+---
+
+## Cloud platform specifics
+
+- **Cloud provider:** {{CLOUD_PROVIDER}}
+- **Key services used:** {{CLOUD_SERVICES}}
+- **Infrastructure definition:** `{{IAC_CONFIG_PATH}}`
+- **Deployment target:** {{DEPLOYMENT_TARGET}}
+
+<!-- Example:
+     Cloud provider: AWS
+     Key services: S3 (artifact storage), Lambda (function execution), RDS (database)
+     Infrastructure: terraform/
+     Deployment target: Lambda functions in us-east-1 -->
+
+---
+
+## Vendor SDK notes
+
+{{VENDOR_SDK_NOTES}}
+
+<!-- Record any important version-specific behaviors, deprecations, or gotchas for vendor SDKs used in this repo.
+     Example:
+     - "The boto3 S3 client used here requires the `ACL` parameter to be omitted for S3 buckets with Object Ownership enforced."
+     - "The OpenAI SDK version pinned here uses the legacy `Completion` API, not `ChatCompletion`."
+     If none, write "No significant vendor SDK notes." -->
+
+---
+
+## Model / API version pinning
+
+{{MODEL_VERSION_NOTES}}
+
+<!-- If this repo uses AI models (e.g., OpenAI, Anthropic, Vertex AI), record:
+     - Which model versions are pinned or recommended
+     - Any prompt formats that are model-specific
+     - Any token limits or context window constraints relevant to usage
+     Example: "Uses gpt-4o-2024-05-13. Prompts are structured for the ChatCompletion messages API."
+     If not applicable, write "Not applicable." -->
+
+---
+
+## Platform constraints
+
+{{PLATFORM_CONSTRAINTS}}
+
+<!-- Record any platform-level constraints an agent should be aware of:
+     - Rate limits on APIs
+     - Required request/response formats
+     - Authentication and authorization boundaries
+     - Data residency or compliance constraints
+     Example: "The payments API enforces a 10 req/s rate limit per API key. Batch requests accordingly."
+     If none, write "No significant platform constraints identified." -->
