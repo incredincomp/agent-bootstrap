@@ -1,10 +1,5 @@
 """Smoke tests for minimal-python-service fixture."""
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
 from app import app
 
 

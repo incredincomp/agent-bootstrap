@@ -4,16 +4,18 @@ run_fixture_selftest.py
 
 End-to-end self-test harness for the agent-bootstrap system.
 
-Applies the bootstrap scaffold to controlled fixture target repositories
-and validates the result, providing repeatable proof that the apply and
-validate paths work correctly.
+Three fixture states are tested for each fixture target repo:
 
-Three states are tested for each fixture:
-
-  State A — raw fixture     : the fixture as committed; no bootstrap files present
+  State A — raw fixture     : fixture as committed; no bootstrap files present
   State B — scaffold applied: apply_bootstrap.py has run; placeholders remain (expected)
   State C — minimally populated: placeholder values filled from fixtures/population/*.json;
-                                  validation should pass with no errors
+                                  validate_bootstrap.py should pass with zero failures
+
+Applies the bootstrap scaffold to controlled fixture target repositories and validates
+the result, providing repeatable proof that the apply and validate paths work correctly.
+
+State B failing validation is the *expected* outcome — it proves the scaffold was staged
+but not yet populated, exactly as documented. State C passing proves the full path works.
 
 Usage:
     python scripts/run_fixture_selftest.py
@@ -51,7 +53,9 @@ ALL_FIXTURES = [
     "minimal-infra-repo",
 ]
 
-# Files in a bootstrapped target repo that are checked for unfilled placeholders
+# Files in a bootstrapped target repo that are checked for unfilled placeholders.
+# This mirrors TARGET_REPO_PLACEHOLDER_FILES in scripts/validate_bootstrap.py.
+# Keep both lists in sync when adding new template files.
 TARGET_PLACEHOLDER_FILES = [
     "AGENTS.md",
     "IMPLEMENTATION_TRACKER.md",
