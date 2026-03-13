@@ -138,6 +138,21 @@ def run_apply(bootstrap_root, target_dir):
     return result.returncode, result.stdout + result.stderr
 
 
+def run_refresh(bootstrap_root, target_dir, dry_run=False, force=False):
+    """
+    Run refresh_bootstrap.py against target_dir.
+    Returns (returncode, combined_output).
+    """
+    script = os.path.join(bootstrap_root, "scripts", "refresh_bootstrap.py")
+    cmd = [sys.executable, script, "--target-dir", target_dir]
+    if dry_run:
+        cmd.append("--dry-run")
+    if force:
+        cmd.append("--force")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.returncode, result.stdout + result.stderr
+
+
 def run_validate(bootstrap_root, target_dir):
     """
     Run validate_bootstrap.py --target-dir against target_dir.
@@ -245,7 +260,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if not os.path.isdir(fixture_source):
         print(f"  [ERROR] Fixture directory not found: {fixture_source}")
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
-                "note": "fixture directory missing"}
+                "state_d_pass": None, "note": "fixture directory missing"}
 
     # ── State B: scaffold applied, placeholders expected ─────────────────────
     print(f"\n  State B — scaffold applied (placeholders expected)")
@@ -284,7 +299,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
 
     if args.state_b_only:
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "note": "state-b-only mode"}
+                "state_d_pass": None, "note": "state-b-only mode"}
 
     # ── State C: minimally populated, validation should pass ─────────────────
     print(f"\n  State C — minimally populated (validation should pass)")
@@ -292,7 +307,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if population_data is None:
         print(f"  [SKIP] No population data found at {FIXTURES_POPULATION_DIR}/{fixture_name}.json")
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "note": "no population data"}
+                "state_d_pass": None, "note": "no population data"}
 
     work_c = copy_fixture(fixture_name, bootstrap_root, os.path.join(work_root, "state-c"))
 
@@ -302,7 +317,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if args.verbose:
             print_indented(out_apply_c)
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": False,
-                "note": f"apply failed for state-c (exit {rc_apply_c})"}
+                "state_d_pass": None, "note": f"apply failed for state-c (exit {rc_apply_c})"}
 
     apply_population(work_c, population_data)
 
@@ -324,8 +339,46 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if not args.verbose:
             print_indented(out_val_c)
 
-    return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": state_c_pass,
-            "note": ""}
+    # ── State D: refresh --dry-run on populated fixture (must not modify anything) ──
+    print(f"\n  State D — refresh dry-run on populated fixture (must not overwrite)")
+    state_d_pass = False
+    if state_c_pass:
+        # Reuse the already-populated work_c directory
+        rc_refresh_d, out_refresh_d = run_refresh(bootstrap_root, work_c, dry_run=True)
+        if args.verbose:
+            print_indented(out_refresh_d)
+
+        # All populated files should be skipped; exit code must be 0
+        skipped_count = out_refresh_d.count("[SKIPPED]")
+        changed_count = (
+            out_refresh_d.count("[WOULD CREATE]")
+            + out_refresh_d.count("[WOULD REFRESH]")
+            + out_refresh_d.count("[WOULD OVERWRITE]")
+        )
+        state_d_pass = rc_refresh_d == 0 and changed_count == 0 and skipped_count > 0
+        if state_d_pass:
+            print(
+                f"  refresh dry-run (State D): {skipped_count} populated file(s) skipped, "
+                f"0 would change  [OK]"
+            )
+        else:
+            print(
+                f"  [FAIL] State D: rc={rc_refresh_d}, "
+                f"would_change={changed_count}, skipped={skipped_count}"
+            )
+            if not args.verbose:
+                print_indented(out_refresh_d)
+    else:
+        print(f"  [SKIP] State D skipped — State C failed")
+        state_d_pass = None
+
+    return {
+        "name": fixture_name,
+        "state_b_pass": state_b_pass,
+        "state_c_pass": state_c_pass,
+        "state_d_pass": state_d_pass,
+        "note": "",
+    }
 
 
 def main():
@@ -353,7 +406,7 @@ def main():
     print(f"  Bootstrap root : {bootstrap_root}")
     print(f"  Work directory : {work_root}")
     print(f"  Fixtures       : {', '.join(fixtures_to_test)}")
-    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C'}")
+    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C + State D'}")
 
     results = []
     try:
@@ -381,10 +434,17 @@ def main():
         else:
             c_label = "FAIL"
             all_pass = False
+        if r.get("state_d_pass") is None:
+            d_label = "SKIP"
+        elif r["state_d_pass"]:
+            d_label = "PASS"
+        else:
+            d_label = "FAIL"
+            all_pass = False
         if not r["state_b_pass"]:
             all_pass = False
         note_str = f"  ({r['note']})" if r["note"] else ""
-        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}{note_str}")
+        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}  D:{d_label}{note_str}")
 
     print()
     if all_pass:

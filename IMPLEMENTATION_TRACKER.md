@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 10 complete — GitHub Actions CI Regression Gate**
+**Phase: Milestone 11 complete — Bootstrap Refresh / Upgrade Path**
 
 ---
 
@@ -31,6 +31,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 8 | Target Repo Apply Path | ✅ Complete | `apply_bootstrap.py` created; manifest, README, AGENTS.md updated |
 | 9 | End-to-End Fixtures and Self-Test Harness | ✅ Complete | 2 fixture repos, population data, self-test runner; both fixtures B:PASS C:PASS |
 | 10 | GitHub Actions CI Regression Gate | ✅ Complete | `.github/workflows/ci.yml` created; runs validate + self-test on push/PR |
+| 11 | Bootstrap Refresh / Upgrade Path | ✅ Complete | `refresh_bootstrap.py` created; manifest updated with refresh section; State D self-test; README/AGENTS updated |
 
 ---
 
@@ -186,6 +187,14 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | ci.yml workflow triggers | ✅ Pass | push, pull_request, workflow_dispatch all present |
 | ci.yml regression commands | ✅ Pass | py_compile, validate_bootstrap.py, run_fixture_selftest.py all present |
 | Local equivalents of CI commands | ✅ Pass | All three commands run locally and exit 0 |
+| refresh_bootstrap.py syntax check | ✅ Pass | `python -m py_compile scripts/refresh_bootstrap.py` |
+| refresh_bootstrap.py dry-run on empty target | ✅ Pass | 7 files [WOULD CREATE]; bootstrap marker not detected; exits 0 |
+| refresh_bootstrap.py dry-run on freshly applied target | ✅ Pass | 6 [UNCHANGED], 1 [WOULD REFRESH] (marker has {{BOOTSTRAP_NOTES}}); exits 0 |
+| refresh_bootstrap.py on populated target | ✅ Pass | All populated files [SKIPPED]; exits 0 |
+| validate_bootstrap.py detects refresh_bootstrap.py | ✅ Pass | Script added to BOOTSTRAP_REPO_REQUIRED_FILES; validate exits 0 |
+| Self-test State D: minimal-python-service | ✅ Pass | 6 populated files skipped, 0 would change |
+| Self-test State D: minimal-infra-repo | ✅ Pass | 6 populated files skipped, 0 would change |
+| Full self-test with State D | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0; B:PASS C:PASS D:PASS for both fixtures |
 
 ---
 
@@ -214,6 +223,38 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
+## Decisions made in Milestone 11 (bootstrap refresh / upgrade path)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| New script `scripts/refresh_bootstrap.py` rather than extending `apply_bootstrap.py` | Refresh has distinct semantics (classification, skip-populated logic, lifecycle detection) that would clutter the apply path; a separate script is clearer and independently testable | Extending apply_bootstrap.py (rejected: would create confusing overlap of behaviors) |
+| File classification based on presence of unfilled `{{PLACEHOLDER}}` markers | Most reliable practical signal for "not yet populated by an agent"; does not require storing prior template snapshots | Hash-based comparison to prior bootstrap version (rejected: requires storing template snapshots; no prior snapshots exist) |
+| Four classifications: missing / unchanged / safe-refresh / populated | Covers all observable states; maps cleanly to safe actions; avoids invented complexity | More granular states (rejected: unnecessary without evidence of need) |
+| `safe-if-unpopulated` vs `manual-review` refresh policies per file | IMPLEMENTATION_TRACKER.md and repo_discovery.json are always populated early; other scaffold files may remain unpopulated; explicit per-file policy avoids guessing | Single policy for all files (rejected: would either be too aggressive or too conservative) |
+| State D in self-test harness: refresh --dry-run on State C fixture | Provides bounded, repeatable proof of non-destructive behavior; cheap to run | Separate integration test suite (rejected: overkill; State D fits cleanly into existing harness) |
+| Manifest `refresh:` section added | Documents the policy machine-readably; makes file classification decisions visible and auditable | Inline-only in the script (rejected: harder to inspect without reading code) |
+| Bootstrap marker (`bootstrap/BOOTSTRAP_SOURCE.md`) classified as `marker` policy | Marker file has auto-filled bootstrap-system values; standard placeholder detection would misclassify it | Same as other files (rejected: marker has different semantics from scaffold files) |
+
+---
+
+## Files created/modified in Milestone 11 (bootstrap refresh / upgrade path)
+
+### scripts/
+- `scripts/refresh_bootstrap.py` — new; safe refresh/upgrade script with classification logic
+
+### Root
+- `AGENTS.md` — updated operational surfaces (3→4); added lifecycle section; added forbidden action for overwriting populated files
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 11 recorded
+- `bootstrap-manifest.yaml` — added `scripts/refresh_bootstrap.py` to required files; added `refresh:` section with classification policies
+- `README.md` — added "Refreshing an already-bootstrapped target repo" section; added apply vs refresh vs validate table; updated CI regressions note
+- `.github/workflows/ci.yml` — added `scripts/refresh_bootstrap.py` to syntax check step
+
+### scripts/ (modified)
+- `scripts/validate_bootstrap.py` — added `scripts/refresh_bootstrap.py` to `BOOTSTRAP_REPO_REQUIRED_FILES`
+- `scripts/run_fixture_selftest.py` — added `run_refresh()` helper; added State D test (refresh --dry-run on populated fixture); updated summary line to show D label
+
+---
+
 ## Open improvements (future milestones)
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
@@ -221,18 +262,20 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 - [x] Add end-to-end fixture self-test harness ✅ Done (Milestone 9)
 - [ ] Add a `jsonschema`-based validation mode (optional, behind `--strict` flag)
 - [x] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push ✅ Done (Milestone 10)
+- [x] Add a safe refresh/upgrade path for already-bootstrapped target repos ✅ Done (Milestone 11)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [ ] Consider adding a `CHANGELOG.md` when this repo has meaningful version history
 - [ ] Add CODEOWNERS or similar if this becomes a shared team resource
-- [ ] Make `apply_bootstrap.py` fully read template mappings from `bootstrap-manifest.yaml`
-  rather than the static fallback list (currently in sync; unifying reduces future drift)
+- [ ] Make `apply_bootstrap.py` and `refresh_bootstrap.py` fully read template mappings
+  from `bootstrap-manifest.yaml` rather than the static fallback list (currently in sync;
+  unifying reduces future drift)
 
 ---
 
 ## Next strongest bounded milestone
 
-**Milestone 11 — jsonschema-based strict validation (optional)**
+**Milestone 12 — jsonschema-based strict validation (optional)**
 
 Scope:
 - Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)

@@ -36,7 +36,7 @@ Out of scope:
 
 ## Operational surfaces
 
-This repository has three operational surfaces:
+This repository has four operational surfaces:
 
 1. **Bootstrap source validation** — confirms that this repo's own required files
    are present and intact.
@@ -50,18 +50,50 @@ This repository has three operational surfaces:
    python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
    ```
 
-3. **End-to-end fixture self-test** — applies the scaffold to controlled fixture
+3. **Target repo refresh / upgrade** — updates managed files in an already-bootstrapped
+   target repository to align with the current canonical templates. Safe by default:
+   skips populated files unless `--force` is given.
+   ```
+   python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo --dry-run
+   python scripts/refresh_bootstrap.py --target-dir /path/to/target-repo
+   ```
+
+4. **End-to-end fixture self-test** — applies the scaffold to controlled fixture
    target repos and validates the result, proving the apply and validate paths work.
    ```
    python scripts/run_fixture_selftest.py
    ```
 
-The apply script is **safe by default**: it never overwrites existing files unless
-`--force` is passed explicitly. Always run with `--dry-run` first when unsure.
+The apply and refresh scripts are both **safe by default**: they never overwrite
+populated files unless `--force` is passed explicitly. Always run with `--dry-run`
+first when unsure.
 
 Target-repo content population (filling `{{PLACEHOLDER}}` markers) remains
-**agent-led and evidence-driven**. The apply script does not auto-fill repo-specific
-content. Run the appropriate prompt after apply.
+**agent-led and evidence-driven**. Neither script auto-fills repo-specific content.
+Run the appropriate prompt after apply.
+
+---
+
+## Target repo lifecycle
+
+Target repositories now have a lifecycle, not just an initial bootstrap:
+
+1. **Apply** (`apply_bootstrap.py`) — create the scaffold in a fresh target repo.
+2. **Populate** (agent session with a prompt) — fill placeholders with real evidence.
+3. **Validate** (`validate_bootstrap.py --target-dir`) — confirm the populated state.
+4. **Refresh** (`refresh_bootstrap.py`) — realign managed files when bootstrap templates
+   are updated.
+
+Agents operating on bootstrapped target repos must respect this lifecycle:
+- Do not treat refresh as an opportunity to clobber populated repo-specific files.
+- Diagnose diffs and local edits before deciding to force an overwrite.
+- Prefer `--dry-run` output as a diagnostic tool before taking action.
+- Any template or manifest change must preserve safe upgrade behavior.
+
+**Repo-specific populated files must not be overwritten casually.**
+The `IMPLEMENTATION_TRACKER.md`, `artifacts/ai/repo_discovery.json`, and similar
+files contain real project state. Treat them as authoritative unless there is
+explicit evidence they should be replaced.
 
 ---
 
@@ -91,6 +123,8 @@ Do not:
 - Mark milestones complete in the tracker without actually completing the work.
 - Create speculative architecture or aspirational code that is not functional.
 - Silently change the semantics of prompt files.
+- Blindly overwrite populated target-repo files during refresh — always classify first.
+- Change apply, refresh, or validation logic in ways that break safe-by-default behavior.
 
 ---
 
@@ -159,7 +193,7 @@ Rules:
 
 The workflow runs these commands in order:
 ```
-python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py
+python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py
 python scripts/validate_bootstrap.py
 python scripts/run_fixture_selftest.py
 ```
