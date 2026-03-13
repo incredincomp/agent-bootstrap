@@ -37,6 +37,7 @@ bootstrap_repo_required_files:
   - schemas/implementation_tracker.schema.json
   - schemas/repo_discovery.schema.json
   - scripts/validate_bootstrap.py
+  - scripts/apply_bootstrap.py
 
 # ─────────────────────────────────────────────
 # Files required in a bootstrapped TARGET repo
@@ -152,6 +153,57 @@ required_output_summary:
   format: >
     The summary must be written into IMPLEMENTATION_TRACKER.md in the target repo.
     It must be readable by a future agent or human with no chat history.
+
+# ─────────────────────────────────────────────
+# Apply path configuration
+# Drives scripts/apply_bootstrap.py behavior
+# ─────────────────────────────────────────────
+apply:
+  script: scripts/apply_bootstrap.py
+  bootstrap_marker: bootstrap/BOOTSTRAP_SOURCE.md
+  overwrite_default: false
+  dry_run_supported: true
+
+  # Template → target-path mappings used by apply_bootstrap.py.
+  # source: path relative to the bootstrap repo root.
+  # destination: path relative to the target repo root.
+  template_mappings:
+    - source: templates/AGENTS.md.template
+      destination: AGENTS.md
+      description: Execution contract for AI agents
+
+    - source: templates/IMPLEMENTATION_TRACKER.md.template
+      destination: IMPLEMENTATION_TRACKER.md
+      description: Live state file — milestones, decisions, validation
+
+    - source: templates/docs/ai/REPO_MAP.md.template
+      destination: docs/ai/REPO_MAP.md
+      description: Human + agent-readable repository map
+
+    - source: templates/docs/ai/SOURCE_REFRESH.md.template
+      destination: docs/ai/SOURCE_REFRESH.md
+      description: Instructions for re-syncing agent knowledge
+
+    - source: templates/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+      destination: docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md
+      description: Vendor-specific AI knowledge base
+
+    - source: templates/bootstrap/BOOTSTRAP_SOURCE.md.template
+      destination: bootstrap/BOOTSTRAP_SOURCE.md
+      description: Bootstrap origin marker (partially rendered by apply script)
+
+    - source: templates/artifacts/ai/repo_discovery.json.template
+      destination: artifacts/ai/repo_discovery.json
+      description: Machine-readable discovery artifact
+
+  # Placeholders that apply_bootstrap.py fills automatically in the marker file.
+  # All other {{PLACEHOLDER}} markers in templates remain for agent population.
+  auto_filled_placeholders:
+    - BOOTSTRAP_SOURCE_REPO
+    - BOOTSTRAP_SOURCE_VERSION
+    - BOOTSTRAP_DATE
+    - BOOTSTRAP_AGENT
+    - BOOTSTRAP_PROMPT_USED
 
 # ─────────────────────────────────────────────
 # Stop condition for a target-repo bootstrap run

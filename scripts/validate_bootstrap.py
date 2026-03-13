@@ -52,6 +52,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "schemas/implementation_tracker.schema.json",
     "schemas/repo_discovery.schema.json",
     "scripts/validate_bootstrap.py",
+    "scripts/apply_bootstrap.py",
 ]
 
 # JSON files that must be parseable as valid JSON
