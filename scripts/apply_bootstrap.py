@@ -191,7 +191,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def resolve_mappings(profile_name, bootstrap_root):
+def resolve_mappings(profile_name):
     """
     Return the effective template mappings for the given profile.
 
@@ -366,7 +366,7 @@ def main():
         "errors": [],
     }
 
-    effective_mappings = resolve_mappings(profile, bootstrap_root)
+    effective_mappings = resolve_mappings(profile)
 
     for mapping in effective_mappings:
         source_path = os.path.join(bootstrap_root, mapping["source"])

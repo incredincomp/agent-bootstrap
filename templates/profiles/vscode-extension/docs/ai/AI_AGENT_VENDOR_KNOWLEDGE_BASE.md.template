@@ -22,9 +22,11 @@ assumptions about extension APIs, activation events, and publishing workflows.
      Example:
        Engine: vscode ^1.85.0 (see package.json engines.vscode)
        Entry point: src/extension.ts (activate / deactivate exports)
-       Activation events: onCommand:myext.doThing, onLanguage:python
+       Auto-activation: VS Code 1.74+ infers activation from contribution points.
+         Explicit activationEvents in package.json are optional (deprecated for most cases)
+         but still needed for events like onStartupFinished or onFileSystem.
        Contribution points: commands, menus, languages, grammars
-     Fill from package.json contributes, activationEvents, and main fields. -->
+     Fill from package.json contributes, activationEvents (if present), and main fields. -->
 
 - **VS Code engine version:** <!-- fill from package.json engines.vscode -->
 - **Extension entry point:** `{{ENTRY_POINT_PATH}}`
