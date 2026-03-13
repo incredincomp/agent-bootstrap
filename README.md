@@ -130,7 +130,67 @@ These are two separate steps. Apply first, then run the prompt.
 
 ---
 
-## How an agent should consume this repository
+## End-to-end fixtures and self-test harness
+
+`fixtures/` contains controlled minimal target repositories and population data
+used to prove the bootstrap apply and validate workflow end-to-end.
+
+`scripts/run_fixture_selftest.py` orchestrates the proof flow against each fixture.
+
+### Three fixture states
+
+| State | Description | Validation result |
+|-------|-------------|-------------------|
+| **A** — raw fixture | Fixture as committed; no bootstrap files present | N/A (starting point) |
+| **B** — scaffold applied | `apply_bootstrap.py` run; placeholders present | Expected to **fail** (unfilled placeholders) |
+| **C** — minimally populated | Placeholder values applied from `fixtures/population/*.json` | Expected to **pass** |
+
+State B failing is **correct behavior** — it proves the scaffold was staged but not yet
+populated, exactly as documented. State C passing proves the full population path works.
+
+**State C population data is fixture-only proof data.** It is not the result of real
+discovery and does not replace evidence-driven agent work. It exists only to prove
+that a fully populated bootstrap passes validation.
+
+### Example commands
+
+```bash
+# Run all fixtures (State B + State C):
+python scripts/run_fixture_selftest.py
+
+# Run a specific fixture only:
+python scripts/run_fixture_selftest.py --fixture minimal-python-service
+
+# State B only (scaffold staging proof, skip population):
+python scripts/run_fixture_selftest.py --state-b-only
+
+# Verbose output + inspect working copies:
+python scripts/run_fixture_selftest.py --verbose --keep-work-dir
+```
+
+### Expected output
+
+```
+Bootstrap self-test
+  ...
+  minimal-python-service                    B:PASS  C:PASS
+  minimal-infra-repo                        B:PASS  C:PASS
+
+SELF-TEST PASSED.
+```
+
+### Fixture descriptions
+
+| Fixture | Shape | Why |
+|---------|-------|-----|
+| `minimal-python-service` | Code-oriented (Flask, pytest) | Proves bootstrap on a typical application repo |
+| `minimal-infra-repo` | Infra/docs-oriented (Terraform) | Proves bootstrap on a non-application, docs-heavy repo |
+
+See `fixtures/README.md` for full fixture documentation.
+
+---
+
+
 
 An agent that receives a prompt from this repo's `prompts/` directory should:
 
@@ -223,6 +283,14 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 │  │  └─ AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
 │  └─ artifacts/ai/
 │     └─ repo_discovery.json.template
+├─ fixtures/                          ← fixture target repos + self-test data
+│  ├─ README.md                       ← fixture documentation
+│  ├─ targets/
+│  │  ├─ minimal-python-service/      ← code-oriented fixture (Flask, pytest)
+│  │  └─ minimal-infra-repo/          ← infra/docs-oriented fixture (Terraform)
+│  └─ population/
+│     ├─ minimal-python-service.json  ← State C proof data
+│     └─ minimal-infra-repo.json      ← State C proof data
 ├─ examples/                          ← per-repo-type discovery notes
 │  ├─ python-service/
 │  ├─ infra-repo/
@@ -233,7 +301,8 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 │  └─ repo_discovery.schema.json
 └─ scripts/
    ├─ validate_bootstrap.py           ← lightweight validation script
-   └─ apply_bootstrap.py              ← scaffold apply script
+   ├─ apply_bootstrap.py              ← scaffold apply script
+   └─ run_fixture_selftest.py         ← end-to-end self-test harness
 ```
 
 ---

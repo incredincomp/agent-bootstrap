@@ -38,6 +38,13 @@ bootstrap_repo_required_files:
   - schemas/repo_discovery.schema.json
   - scripts/validate_bootstrap.py
   - scripts/apply_bootstrap.py
+  - scripts/run_fixture_selftest.py
+  - fixtures/targets/minimal-python-service/README.md
+  - fixtures/targets/minimal-python-service/conftest.py
+  - fixtures/targets/minimal-infra-repo/README.md
+  - fixtures/population/minimal-python-service.json
+  - fixtures/population/minimal-infra-repo.json
+  - fixtures/README.md
 
 # ─────────────────────────────────────────────
 # Files required in a bootstrapped TARGET repo
@@ -204,6 +211,35 @@ apply:
     - BOOTSTRAP_DATE
     - BOOTSTRAP_AGENT
     - BOOTSTRAP_PROMPT_USED
+
+# ─────────────────────────────────────────────
+# End-to-end fixture self-test configuration
+# ─────────────────────────────────────────────
+fixtures:
+  runner: scripts/run_fixture_selftest.py
+  targets_dir: fixtures/targets
+  population_dir: fixtures/population
+
+  fixture_states:
+    state_a: raw fixture — no bootstrap files present
+    state_b: scaffold applied — placeholders present (expected)
+    state_c: minimally populated — all placeholders filled; validation passes
+
+  fixtures:
+    - name: minimal-python-service
+      shape: code-oriented (Python service)
+      target_dir: fixtures/targets/minimal-python-service
+      population_file: fixtures/population/minimal-python-service.json
+
+    - name: minimal-infra-repo
+      shape: infrastructure/docs-oriented (Terraform)
+      target_dir: fixtures/targets/minimal-infra-repo
+      population_file: fixtures/population/minimal-infra-repo.json
+
+  safety:
+    - Canonical fixture directories are never mutated during test runs.
+    - All operations use temporary working copies.
+    - Working copies are removed after each run unless --keep-work-dir is passed.
 
 # ─────────────────────────────────────────────
 # Stop condition for a target-repo bootstrap run

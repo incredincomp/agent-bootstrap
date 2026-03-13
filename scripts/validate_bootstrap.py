@@ -53,6 +53,13 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "schemas/repo_discovery.schema.json",
     "scripts/validate_bootstrap.py",
     "scripts/apply_bootstrap.py",
+    "scripts/run_fixture_selftest.py",
+    "fixtures/targets/minimal-python-service/README.md",
+    "fixtures/targets/minimal-python-service/conftest.py",
+    "fixtures/targets/minimal-infra-repo/README.md",
+    "fixtures/population/minimal-python-service.json",
+    "fixtures/population/minimal-infra-repo.json",
+    "fixtures/README.md",
 ]
 
 # JSON files that must be parseable as valid JSON

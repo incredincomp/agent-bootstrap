@@ -22,6 +22,7 @@ In scope:
 - JSON schemas for structured artifacts
 - A lightweight validation script
 - A scaffold apply script for staging templates into target repos
+- End-to-end fixture target repos and self-test harness
 - Documentation explaining the system
 - The implementation tracker for this repo's own state
 
@@ -35,7 +36,7 @@ Out of scope:
 
 ## Operational surfaces
 
-This repository has two operational surfaces:
+This repository has three operational surfaces:
 
 1. **Bootstrap source validation** — confirms that this repo's own required files
    are present and intact.
@@ -47,6 +48,12 @@ This repository has two operational surfaces:
    target repository so an agent can populate them with real, evidence-based content.
    ```
    python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+   ```
+
+3. **End-to-end fixture self-test** — applies the scaffold to controlled fixture
+   target repos and validates the result, proving the apply and validate paths work.
+   ```
+   python scripts/run_fixture_selftest.py
    ```
 
 The apply script is **safe by default**: it never overwrites existing files unless
@@ -112,7 +119,30 @@ Validation does **not** require semantic correctness of templates — only file 
 
 ---
 
-## Template-writing rules
+## Fixture and self-test rules
+
+Fixtures in `fixtures/` are regression-proof assets. Handle them carefully.
+
+Rules:
+- Fixtures must remain intentionally minimal. Do not add unnecessary files.
+- Fixture edits must be intentional and documented in `IMPLEMENTATION_TRACKER.md`.
+- `fixtures/population/*.json` must cover all `{{PLACEHOLDER}}` markers in the
+  templates. Update population data whenever templates change.
+- The self-test harness must pass after any change to templates, prompts, apply
+  logic, or validation logic. Run it before declaring milestone work complete:
+  ```
+  python scripts/run_fixture_selftest.py
+  ```
+- Fixture population data is **proof-only**. It is not real discovery content.
+  Never present it as evidence of actual repository analysis.
+- The self-test harness must never mutate canonical fixture directories.
+  All operations must use working copies.
+- Prefer extending proof coverage carefully over adding new fixtures casually.
+  New fixtures should represent a meaningfully different repo shape.
+
+---
+
+
 
 Templates live in `templates/`. They are canonical starting points for target repos.
 
