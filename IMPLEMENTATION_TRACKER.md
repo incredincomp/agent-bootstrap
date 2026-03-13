@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 9 complete — End-to-End Fixtures and Bootstrap Self-Test Harness**
+**Phase: Milestone 10 complete — GitHub Actions CI Regression Gate**
 
 ---
 
@@ -30,6 +30,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 7 | Dogfood and tighten | ✅ Complete | Validated bootstrap against itself; fixed `--target-dir` gap; strengthened prompts and templates |
 | 8 | Target Repo Apply Path | ✅ Complete | `apply_bootstrap.py` created; manifest, README, AGENTS.md updated |
 | 9 | End-to-End Fixtures and Self-Test Harness | ✅ Complete | 2 fixture repos, population data, self-test runner; both fixtures B:PASS C:PASS |
+| 10 | GitHub Actions CI Regression Gate | ✅ Complete | `.github/workflows/ci.yml` created; runs validate + self-test on push/PR |
 
 ---
 
@@ -181,6 +182,35 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | Self-test: minimal-infra-repo State B | ✅ Pass | 7 files created; 140 unfilled placeholders detected (expected) |
 | Self-test: minimal-infra-repo State C | ✅ Pass | All 14 checks passed; 0 unfilled placeholders |
 | Full self-test run | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0; B:PASS C:PASS for both fixtures |
+| ci.yml YAML validity | ✅ Pass | Inspected for valid YAML structure and two-space indentation |
+| ci.yml workflow triggers | ✅ Pass | push, pull_request, workflow_dispatch all present |
+| ci.yml regression commands | ✅ Pass | py_compile, validate_bootstrap.py, run_fixture_selftest.py all present |
+| Local equivalents of CI commands | ✅ Pass | All three commands run locally and exit 0 |
+
+---
+
+## Decisions made in Milestone 10 (GitHub Actions CI regression gate)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| Single `regression` job, no matrix | The scripts have no external dependencies and run fast; a matrix adds complexity for no benefit at this stage | Multi-job or matrix (deferred: no current evidence of need) |
+| Python 3.11 only | Stable LTS version; scripts use only stdlib; no third-party dependency version matrix needed | 3.x latest or multi-version matrix (rejected: overkill given stdlib-only scripts) |
+| `actions/checkout@v4` and `actions/setup-python@v5` | Current stable major versions for these standard actions | Older versions (rejected: best to use maintained versions) |
+| Separate "syntax check" step before main commands | Catches import/syntax errors with a clear label before running logic; cheap and explicit | Relying on script exit codes alone (rejected: harder to debug which step failed) |
+| No dependency caching | No `pip install` step; nothing to cache | Caching (rejected: unnecessary overhead with no dependencies) |
+| No branch filtering | No established branch convention in this repo; keeping triggers general is safer | `branches: [main]` filter (rejected: would miss branch-level regression detection) |
+
+---
+
+## Files created/modified in Milestone 10 (GitHub Actions CI regression gate)
+
+### .github/ (new directory)
+- `.github/workflows/ci.yml` — new; GitHub Actions workflow: syntax check, validate_bootstrap.py, run_fixture_selftest.py
+
+### Root
+- `AGENTS.md` — added CI regression gate section with rules for agents
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 10 recorded
+- `README.md` — added "Continuous integration" section with what it checks, when it runs, and what regressions it catches
 
 ---
 
@@ -190,7 +220,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 - [x] Add `scripts/apply_bootstrap.py` to stage scaffold into target repos safely ✅ Done (Milestone 8)
 - [x] Add end-to-end fixture self-test harness ✅ Done (Milestone 9)
 - [ ] Add a `jsonschema`-based validation mode (optional, behind `--strict` flag)
-- [ ] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push
+- [x] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push ✅ Done (Milestone 10)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [ ] Consider adding a `CHANGELOG.md` when this repo has meaningful version history
@@ -202,12 +232,12 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ## Next strongest bounded milestone
 
-**Milestone 10 — GitHub Actions CI workflow**
+**Milestone 11 — jsonschema-based strict validation (optional)**
 
 Scope:
-- Add a `.github/workflows/ci.yml` that runs `validate_bootstrap.py` and
-  `run_fixture_selftest.py` on every push and pull request to main
-- Ensures the bootstrap source repo stays intact and fixtures pass on every change
-- No heavy dependencies; Python stdlib only; fast workflow (< 1 min)
+- Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)
+  to validate `artifacts/ai/repo_discovery.json` against `schemas/repo_discovery.schema.json`
+- Falls back gracefully if `jsonschema` is not installed
+- Keeps the default validation path dependency-free
 
-Estimated size: Small (1 file: `.github/workflows/ci.yml`)
+Estimated size: Small (1 file modified: `scripts/validate_bootstrap.py`)

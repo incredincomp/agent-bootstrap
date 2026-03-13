@@ -142,7 +142,31 @@ Rules:
 
 ---
 
+## CI regression gate
 
+`.github/workflows/ci.yml` is the automated regression gate for this repository.
+It runs on every push, pull request, and manual trigger.
+
+Rules:
+- CI is required. Do not bypass or disable it.
+- Any change to prompts, templates, manifest, scripts, or fixtures must leave CI passing.
+- If CI fails after your change, diagnose the root cause. Do not paper over failures
+  with superficial workarounds or by weakening the checks.
+- Keep the workflow lean and readable. Do not add heavyweight tooling, large matrices,
+  or packaging/release steps to the CI workflow.
+- If a CI failure is pre-existing and unrelated to your change, record it in
+  `IMPLEMENTATION_TRACKER.md` as a known gap rather than silently ignoring it.
+
+The workflow runs these commands in order:
+```
+python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py
+python scripts/validate_bootstrap.py
+python scripts/run_fixture_selftest.py
+```
+
+Before pushing, run these same commands locally to avoid CI surprises.
+
+---
 
 Templates live in `templates/`. They are canonical starting points for target repos.
 

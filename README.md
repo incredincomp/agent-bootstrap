@@ -321,6 +321,48 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 
 ---
 
+## Continuous integration
+
+A GitHub Actions workflow at `.github/workflows/ci.yml` runs automatically on every push,
+pull request, and manual trigger.
+
+### What it checks
+
+| Step | Command |
+|------|---------|
+| Script syntax | `python -m py_compile scripts/*.py` |
+| Bootstrap repo structure | `python scripts/validate_bootstrap.py` |
+| Fixture end-to-end self-tests | `python scripts/run_fixture_selftest.py` |
+
+### When it runs
+
+- Every push to any branch
+- Every pull request
+- On demand via the GitHub Actions "Run workflow" button
+
+### Relationship to local validation
+
+CI runs the same commands you should run locally before pushing:
+
+```bash
+python scripts/validate_bootstrap.py
+python scripts/run_fixture_selftest.py
+```
+
+If CI fails, the failure maps directly to one of these commands — inspect the step
+that failed to identify which check broke.
+
+### What regressions it catches
+
+- Missing required bootstrap repo files
+- Broken or invalid JSON schemas and templates
+- `apply_bootstrap.py` failures (scaffold apply path)
+- `validate_bootstrap.py` failures (validation path)
+- Fixture self-test failures (State B or State C)
+- Python syntax errors in any of the three scripts
+
+---
+
 ## Limitations and non-goals
 
 - This repo does **not** implement a CLI for end-users.

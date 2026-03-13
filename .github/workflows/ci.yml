@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression:
+    name: Bootstrap regression checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Show Python version
+        run: python --version
+
+      - name: Check script syntax
+        run: python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py
+
+      - name: Validate bootstrap repository structure
+        run: python scripts/validate_bootstrap.py
+
+      - name: Run fixture end-to-end self-tests
+        run: python scripts/run_fixture_selftest.py
