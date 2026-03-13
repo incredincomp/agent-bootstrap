@@ -1,0 +1,109 @@
+# AI Agent Vendor Knowledge Base — {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+Profile: infra-repo
+This file records vendor-specific knowledge for an infrastructure repository
+(e.g., Terraform, Pulumi, Ansible, CloudFormation, Helm).
+Fill based on actual evidence from the repo (provider configs, module sources, README).
+If a section is not applicable, write "Not applicable — [reason]" rather than deleting the section.
+Do not speculate about resources or providers not actually present in this repo.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file captures infrastructure tooling and cloud provider knowledge that an AI agent needs to
+work effectively in this repository. It is intended to prevent agents from using stale or incorrect
+assumptions about providers, modules, and platform specifics.
+
+---
+
+## Infrastructure tooling
+
+<!-- Record the IaC tool, version, and workflow in use.
+     Example:
+       Tool: Terraform 1.7 (see .terraform-version or required_version in main.tf)
+       State backend: S3 + DynamoDB locking (see backend.tf)
+       Module source: Terraform Registry + local modules in modules/
+     Fill from evidence in *.tf files, .terraform-version, or README. -->
+
+- **IaC tool and version:** {{BUILD_SYSTEM}}
+- **State backend:** <!-- fill from backend.tf or equivalent -->
+- **Entry point / working directory:** `{{ENTRY_POINT_PATH}}`
+- **Plan command:** `{{BUILD_COMMAND}}`
+- **Validate command:** `{{TEST_COMMAND}}`
+
+---
+
+## Cloud platform specifics
+
+- **Cloud provider:** {{CLOUD_PROVIDER}}
+- **Key services used:** {{CLOUD_SERVICES}}
+- **Infrastructure definition:** `{{IAC_CONFIG_PATH}}`
+- **Deployment target:** {{DEPLOYMENT_TARGET}}
+
+<!-- Describe the provisioning model:
+     - Which cloud regions are targeted
+     - Multi-account or single-account
+     - Workspaces vs. separate state files per environment
+     - Any shared module registry or private Terraform registry in use -->
+
+---
+
+## AI / ML frameworks in use
+
+| Framework / SDK | Version | Purpose | Key files |
+|----------------|---------|---------|-----------|
+| `{{AI_FRAMEWORK_1}}` | `{{AI_FRAMEWORK_1_VERSION}}` | {{AI_FRAMEWORK_1_PURPOSE}} | `{{AI_FRAMEWORK_1_KEY_FILES}}` |
+
+<!-- For infra repos, this section is usually "Not applicable." Record only if the
+     infrastructure itself provisions AI/ML services (e.g., SageMaker endpoints, Vertex AI). -->
+
+---
+
+## External AI APIs
+
+| API | Provider | Usage | Auth method | Config location |
+|-----|----------|-------|-------------|----------------|
+| `{{AI_API_1}}` | `{{AI_API_1_PROVIDER}}` | {{AI_API_1_USAGE}} | {{AI_API_1_AUTH}} | `{{AI_API_1_CONFIG}}` |
+
+<!-- Usually "Not applicable" for infra repos unless the infrastructure provisions API endpoints. -->
+
+---
+
+## Vendor SDK notes
+
+{{VENDOR_SDK_NOTES}}
+
+<!-- Record infrastructure-specific version and provider gotchas:
+     - Provider version constraints (see required_providers in versions.tf)
+     - Known provider bugs or breaking changes between versions
+     - Deprecated resource types that should not be reused
+     - Terraform/Pulumi state migration notes
+     Example:
+     - "The AWS provider ~> 5.0 removed deprecated `aws_s3_bucket` ACL arguments."
+     - "Do not upgrade the azurerm provider past 3.74 without reviewing breaking changes."
+     If none, write "No significant vendor SDK notes." -->
+
+---
+
+## Model / API version pinning
+
+{{MODEL_VERSION_NOTES}}
+
+<!-- For infra repos: usually "Not applicable" unless provisioning AI model endpoints.
+     If applicable, record model IDs, endpoint ARNs, or service quotas. -->
+
+---
+
+## Platform constraints
+
+{{PLATFORM_CONSTRAINTS}}
+
+<!-- Record infra-specific constraints:
+     - Terraform version minimum (required_version constraint)
+     - Provider version pins (required_providers)
+     - Credentials and authentication method (do not record actual credentials — note the method)
+     - State locking behavior
+     - Cost or quota constraints on provisioned resources
+     Example: "Requires Terraform >= 1.5. AWS credentials via environment variables or instance profile."
+     If none, write "No significant platform constraints identified." -->

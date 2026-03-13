@@ -53,6 +53,13 @@ ALL_FIXTURES = [
     "minimal-infra-repo",
 ]
 
+# Profile to use when applying bootstrap to each fixture.
+# Proves profile-aware apply for both code-oriented and infra-oriented repo shapes.
+FIXTURE_PROFILES = {
+    "minimal-python-service": "python-service",
+    "minimal-infra-repo": "infra-repo",
+}
+
 # Files in a bootstrapped target repo that are checked for unfilled placeholders.
 # This mirrors TARGET_REPO_PLACEHOLDER_FILES in scripts/validate_bootstrap.py.
 # Keep both lists in sync when adding new template files.
@@ -124,14 +131,17 @@ def copy_fixture(fixture_name, bootstrap_root, dest_parent):
     return dest
 
 
-def run_apply(bootstrap_root, target_dir):
+def run_apply(bootstrap_root, target_dir, profile=None):
     """
     Run apply_bootstrap.py against target_dir.
     Returns (returncode, combined_output).
     """
     script = os.path.join(bootstrap_root, "scripts", "apply_bootstrap.py")
+    cmd = [sys.executable, script, "--target-dir", target_dir]
+    if profile:
+        cmd.extend(["--profile", profile])
     result = subprocess.run(
-        [sys.executable, script, "--target-dir", target_dir],
+        cmd,
         capture_output=True,
         text=True,
     )
@@ -262,11 +272,15 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
                 "state_d_pass": None, "note": "fixture directory missing"}
 
+    fixture_profile = FIXTURE_PROFILES.get(fixture_name)
+    if fixture_profile:
+        print(f"  Profile: {fixture_profile}")
+
     # ── State B: scaffold applied, placeholders expected ─────────────────────
     print(f"\n  State B — scaffold applied (placeholders expected)")
     work_b = copy_fixture(fixture_name, bootstrap_root, os.path.join(work_root, "state-b"))
 
-    rc_apply, out_apply = run_apply(bootstrap_root, work_b)
+    rc_apply, out_apply = run_apply(bootstrap_root, work_b, profile=fixture_profile)
     if args.verbose:
         print_indented(out_apply)
 
@@ -311,7 +325,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
 
     work_c = copy_fixture(fixture_name, bootstrap_root, os.path.join(work_root, "state-c"))
 
-    rc_apply_c, out_apply_c = run_apply(bootstrap_root, work_c)
+    rc_apply_c, out_apply_c = run_apply(bootstrap_root, work_c, profile=fixture_profile)
     if rc_apply_c != 0:
         print(f"  [FAIL] apply failed for State C (exit {rc_apply_c})")
         if args.verbose:

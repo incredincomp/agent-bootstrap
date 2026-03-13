@@ -108,6 +108,84 @@ These are two separate steps. Apply first, then run the prompt.
 
 ---
 
+## Bootstrap profiles
+
+Profiles let you apply a slightly different scaffold shape depending on the target
+repository type. They provide more relevant starting guidance without inventing repo-specific content.
+
+### What profiles do and do not do
+
+**Profiles do:**
+- Select profile-specific template variants where they materially improve guidance
+  (currently: `docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md` has per-profile variants)
+- Record the selected profile in `bootstrap/BOOTSTRAP_SOURCE.md` for future reference
+- Allow `refresh_bootstrap.py` to use the same profile-specific templates when upgrading
+
+**Profiles do not:**
+- Auto-populate repo-specific discovery content (that remains agent-led)
+- Replace the bootstrap prompt / discovery step
+- Infer which profile to use — you must select one explicitly
+
+### Supported profiles
+
+| Profile | Suitable for |
+|---------|-------------|
+| `generic` | Any repo not covered by a more specific profile (default) |
+| `python-service` | Python service or library repositories |
+| `infra-repo` | Infrastructure/platform repos (Terraform, Pulumi, Ansible, etc.) |
+| `vscode-extension` | VS Code extension repositories |
+| `kubernetes-platform` | Kubernetes operator or platform repositories |
+
+### Apply with a profile
+
+```bash
+# Apply with the default (generic) profile:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+
+# Apply with a specific profile:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile python-service
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile infra-repo
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile vscode-extension
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile kubernetes-platform
+
+# Preview what a profile apply would create:
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile python-service --dry-run
+```
+
+An unknown profile name causes apply to exit with an error and list the supported options.
+
+### Common core vs profile-specific behavior
+
+The **common core** (applied for all profiles) includes:
+- `AGENTS.md` — execution contract template
+- `IMPLEMENTATION_TRACKER.md` — live state template
+- `docs/ai/REPO_MAP.md` — repository map template
+- `docs/ai/SOURCE_REFRESH.md` — source refresh instructions
+- `bootstrap/BOOTSTRAP_SOURCE.md` — bootstrap origin marker
+- `artifacts/ai/repo_discovery.json` — discovery artifact template
+
+The **profile-specific overlay** replaces:
+- `docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md` — a profile-tuned variant with guidance
+  comments specific to that repo family (Python packaging, IaC providers, VS Code APIs, etc.)
+
+All other files use the same common template regardless of profile.
+
+### How refresh interacts with profile metadata
+
+`refresh_bootstrap.py` reads the `Bootstrap profile` field from
+`bootstrap/BOOTSTRAP_SOURCE.md` and uses the same profile-specific templates when
+upgrading managed files. If no profile is recorded (e.g., the repo was bootstrapped
+before Milestone 12), refresh falls back to the `generic` profile automatically.
+
+### Why profiles do not replace repo discovery
+
+Profiles select which templates to stage — they do not fill those templates with
+repo-specific content. After apply, the `{{PLACEHOLDER}}` markers in profile-specific
+templates still require an agent to inspect the target repo and fill them with real
+evidence, using the bootstrap or discovery prompt.
+
+---
+
 ## Refreshing an already-bootstrapped target repo
 
 `scripts/refresh_bootstrap.py` upgrades an already-bootstrapped target repository
@@ -330,8 +408,11 @@ Inspect → Document → Bound → Validate → Record
 ## Quick-start
 
 ```bash
-# Stage the bootstrap scaffold into a target repo:
+# Stage the bootstrap scaffold into a target repo (default generic profile):
 python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+
+# Stage with a profile (e.g., for a Python service repo):
+python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile python-service
 
 # Then run the bootstrap prompt (new repo) or discovery prompt (existing repo)
 # against the target repo to fill in the content.
@@ -364,7 +445,12 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 │  ├─ docs/ai/
 │  │  ├─ REPO_MAP.md.template
 │  │  ├─ SOURCE_REFRESH.md.template
-│  │  └─ AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+│  │  └─ AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template   ← generic (default)
+│  ├─ profiles/                       ← profile-specific template overrides
+│  │  ├─ python-service/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+│  │  ├─ infra-repo/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+│  │  ├─ vscode-extension/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+│  │  └─ kubernetes-platform/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
 │  └─ artifacts/ai/
 │     └─ repo_discovery.json.template
 ├─ fixtures/                          ← fixture target repos + self-test data
