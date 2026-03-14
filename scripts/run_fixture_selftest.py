@@ -4,12 +4,16 @@ run_fixture_selftest.py
 
 End-to-end self-test harness for the agent-bootstrap system.
 
-Three fixture states are tested for each fixture target repo:
+Four fixture states are tested for each fixture target repo:
 
   State A — raw fixture     : fixture as committed; no bootstrap files present
   State B — scaffold applied: apply_bootstrap.py has run; placeholders remain (expected)
   State C — minimally populated: placeholder values filled from fixtures/population/*.json;
                                   validate_bootstrap.py should pass with zero failures
+  State D — refresh dry-run : refresh_bootstrap.py --dry-run on populated fixture;
+                               must not propose overwriting any populated files
+  State E — profile suggestion: suggest_profile.py on raw fixture;
+                                 must suggest the expected profile for that fixture
 
 Applies the bootstrap scaffold to controlled fixture target repositories and validates
 the result, providing repeatable proof that the apply and validate paths work correctly.
@@ -56,6 +60,13 @@ ALL_FIXTURES = [
 # Profile to use when applying bootstrap to each fixture.
 # Proves profile-aware apply for both code-oriented and infra-oriented repo shapes.
 FIXTURE_PROFILES = {
+    "minimal-python-service": "python-service",
+    "minimal-infra-repo": "infra-repo",
+}
+
+# Expected profile suggestion for each fixture (State E proof).
+# suggest_profile.py must suggest these profiles for the raw fixture directories.
+FIXTURE_EXPECTED_PROFILES = {
     "minimal-python-service": "python-service",
     "minimal-infra-repo": "infra-repo",
 }
@@ -177,6 +188,27 @@ def run_validate(bootstrap_root, target_dir):
     return result.returncode, result.stdout + result.stderr
 
 
+def run_suggest_profile(bootstrap_root, target_dir):
+    """
+    Run suggest_profile.py --json against target_dir.
+    Returns (returncode, combined_output, suggested_profile_or_none).
+    """
+    script = os.path.join(bootstrap_root, "scripts", "suggest_profile.py")
+    result = subprocess.run(
+        [sys.executable, script, "--target-dir", target_dir, "--json"],
+        capture_output=True,
+        text=True,
+    )
+    suggested = None
+    if result.returncode == 0:
+        try:
+            data = json.loads(result.stdout)
+            suggested = data.get("suggested_profile")
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return result.returncode, result.stdout + result.stderr, suggested
+
+
 def load_population_data(bootstrap_root, fixture_name):
     """
     Load the population JSON for a fixture.
@@ -270,7 +302,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if not os.path.isdir(fixture_source):
         print(f"  [ERROR] Fixture directory not found: {fixture_source}")
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
-                "state_d_pass": None, "note": "fixture directory missing"}
+                "state_d_pass": None, "state_e_pass": None, "note": "fixture directory missing"}
 
     fixture_profile = FIXTURE_PROFILES.get(fixture_name)
     if fixture_profile:
@@ -289,6 +321,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if not args.verbose:
             print_indented(out_apply)
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
+                "state_d_pass": None, "state_e_pass": None,
                 "note": f"apply failed (exit {rc_apply})"}
 
     created_count = out_apply.count("[CREATED]")
@@ -313,7 +346,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
 
     if args.state_b_only:
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "state_d_pass": None, "note": "state-b-only mode"}
+                "state_d_pass": None, "state_e_pass": None, "note": "state-b-only mode"}
 
     # ── State C: minimally populated, validation should pass ─────────────────
     print(f"\n  State C — minimally populated (validation should pass)")
@@ -321,7 +354,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if population_data is None:
         print(f"  [SKIP] No population data found at {FIXTURES_POPULATION_DIR}/{fixture_name}.json")
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "state_d_pass": None, "note": "no population data"}
+                "state_d_pass": None, "state_e_pass": None, "note": "no population data"}
 
     work_c = copy_fixture(fixture_name, bootstrap_root, os.path.join(work_root, "state-c"))
 
@@ -331,7 +364,8 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if args.verbose:
             print_indented(out_apply_c)
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": False,
-                "state_d_pass": None, "note": f"apply failed for state-c (exit {rc_apply_c})"}
+                "state_d_pass": None, "state_e_pass": None,
+                "note": f"apply failed for state-c (exit {rc_apply_c})"}
 
     apply_population(work_c, population_data)
 
@@ -386,11 +420,37 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         print(f"  [SKIP] State D skipped — State C failed")
         state_d_pass = None
 
+    # ── State E: profile suggestion on raw fixture ────────────────────────────
+    print(f"\n  State E — profile suggestion on raw fixture")
+    expected_profile = FIXTURE_EXPECTED_PROFILES.get(fixture_name)
+    if expected_profile is None:
+        print(f"  [SKIP] No expected profile configured for this fixture")
+        state_e_pass = None
+    else:
+        fixture_source = os.path.join(bootstrap_root, FIXTURES_TARGETS_DIR, fixture_name)
+        rc_suggest, out_suggest, suggested = run_suggest_profile(bootstrap_root, fixture_source)
+        if args.verbose:
+            print_indented(out_suggest)
+        if rc_suggest != 0:
+            print(f"  [FAIL] suggest_profile.py exited {rc_suggest}")
+            if not args.verbose:
+                print_indented(out_suggest)
+            state_e_pass = False
+        elif suggested == expected_profile:
+            print(f"  suggest_profile (State E): suggested '{suggested}' — matches expected  [OK]")
+            state_e_pass = True
+        else:
+            print(f"  [FAIL] suggest_profile (State E): got '{suggested}', expected '{expected_profile}'")
+            if not args.verbose:
+                print_indented(out_suggest)
+            state_e_pass = False
+
     return {
         "name": fixture_name,
         "state_b_pass": state_b_pass,
         "state_c_pass": state_c_pass,
         "state_d_pass": state_d_pass,
+        "state_e_pass": state_e_pass,
         "note": "",
     }
 
@@ -420,7 +480,7 @@ def main():
     print(f"  Bootstrap root : {bootstrap_root}")
     print(f"  Work directory : {work_root}")
     print(f"  Fixtures       : {', '.join(fixtures_to_test)}")
-    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C + State D'}")
+    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C + State D + State E'}")
 
     results = []
     try:
@@ -455,10 +515,17 @@ def main():
         else:
             d_label = "FAIL"
             all_pass = False
+        if r.get("state_e_pass") is None:
+            e_label = "SKIP"
+        elif r["state_e_pass"]:
+            e_label = "PASS"
+        else:
+            e_label = "FAIL"
+            all_pass = False
         if not r["state_b_pass"]:
             all_pass = False
         note_str = f"  ({r['note']})" if r["note"] else ""
-        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}  D:{d_label}{note_str}")
+        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}  D:{d_label}  E:{e_label}{note_str}")
 
     print()
     if all_pass:

@@ -250,6 +250,38 @@ They are implemented as manifest-driven template overlays — a small and explic
 
 ---
 
+## Profile suggestion — advisory-only rules
+
+`scripts/suggest_profile.py` is a read-only heuristic classifier.  
+It inspects a target repo and suggests the most likely profile.  
+Agents must understand and respect the following contract:
+
+- **Profile suggestion is advisory only.**
+  The script produces a recommendation for the maintainer. It does not apply anything,
+  write any files, or make any decisions on behalf of the operator.
+
+- **Apply must remain explicit.**
+  `apply_bootstrap.py` must never auto-select a profile based on suggestion output.
+  The operator always provides `--profile` explicitly. Do not change this.
+
+- **Heuristics must stay small and evidence-based.**
+  Signal rules live in `PROFILES` dict in `suggest_profile.py`. Each signal must have
+  a clear, inspectable check. Avoid clever scoring abstractions that obscure reasoning.
+
+- **Weak evidence must fall back honestly to `generic`.**
+  If no profile scores above zero, or evidence is mixed and no clear winner exists,
+  the tool must report `generic` and say so explicitly. Never invent confidence.
+
+- **Future profile additions must include suggestion logic.**
+  When adding a new profile, add corresponding signals to `PROFILES` in `suggest_profile.py`
+  and add an expected profile entry in `FIXTURE_EXPECTED_PROFILES` in `run_fixture_selftest.py`
+  if a fixture for that profile exists. Do not add a new profile without proof coverage.
+
+- **The suggestion tool must never mutate the target repo.**
+  No file writes, no subprocess calls that modify state. Read-only filesystem inspection only.
+
+---
+
 Prompts live in `prompts/`. They are copy-paste-ready instructions for agent sessions.
 
 Rules:
