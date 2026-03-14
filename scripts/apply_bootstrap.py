@@ -147,6 +147,16 @@ MARKER_PLACEHOLDERS = {
 }
 
 
+def read_bootstrap_version(bootstrap_root):
+    """Read the bootstrap version from the VERSION file. Returns the version string or 'unknown'."""
+    version_path = os.path.join(bootstrap_root, "VERSION")
+    try:
+        with open(version_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return "unknown"
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
@@ -184,8 +194,8 @@ def parse_args():
         "--bootstrap-version",
         default=None,
         help=(
-            "Bootstrap source version (git SHA, tag, or label) to record in the "
-            "marker file. Defaults to the git HEAD SHA of the bootstrap repo."
+            "Bootstrap source version to record in the marker file. "
+            "Defaults to the version in the VERSION file."
         ),
     )
     return parser.parse_args()
@@ -250,12 +260,13 @@ def get_git_sha(repo_dir):
     return "unknown"
 
 
-def render_marker(content, bootstrap_version, apply_date, profile):
+def render_marker(content, bootstrap_version, bootstrap_revision, apply_date, profile):
     """Replace known bootstrap-system placeholders in the marker file content."""
     result = content
     for placeholder, value in MARKER_PLACEHOLDERS.items():
         result = result.replace(placeholder, value)
     result = result.replace("{{BOOTSTRAP_SOURCE_VERSION}}", bootstrap_version)
+    result = result.replace("{{BOOTSTRAP_SOURCE_REVISION}}", bootstrap_revision)
     result = result.replace("{{BOOTSTRAP_DATE}}", apply_date)
     result = result.replace("{{BOOTSTRAP_PROFILE}}", profile)
     # BOOTSTRAP_NOTES is intentionally left for the agent to fill
@@ -297,7 +308,7 @@ def apply_template(source_path, dest_path, mapping, ctx):
         return f"error:could not read source: {exc}"
 
     if is_marker:
-        content = render_marker(content, ctx["bootstrap_version"], ctx["apply_date"], ctx["profile"])
+        content = render_marker(content, ctx["bootstrap_version"], ctx["bootstrap_revision"], ctx["apply_date"], ctx["profile"])
 
     if dry_run:
         if dest_exists:
@@ -338,11 +349,13 @@ def main():
         )
         sys.exit(1)
 
-    bootstrap_version = args.bootstrap_version or get_git_sha(bootstrap_root)
+    bootstrap_version = args.bootstrap_version or read_bootstrap_version(bootstrap_root)
+    bootstrap_revision = get_git_sha(bootstrap_root)
     apply_date = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
     ctx = {
         "bootstrap_version": bootstrap_version,
+        "bootstrap_revision": bootstrap_revision,
         "apply_date": apply_date,
         "dry_run": args.dry_run,
         "force": args.force,
@@ -351,11 +364,12 @@ def main():
 
     mode_label = "[DRY RUN] " if args.dry_run else ""
     print(f"{mode_label}Applying bootstrap scaffold")
-    print(f"  Bootstrap source : {bootstrap_root}")
-    print(f"  Bootstrap version: {bootstrap_version}")
-    print(f"  Target directory : {target_dir}")
-    print(f"  Profile          : {profile} — {PROFILES[profile]['description']}")
-    print(f"  Overwrite mode   : {'--force (overwrite existing)' if args.force else 'safe (skip existing)'}")
+    print(f"  Bootstrap source  : {bootstrap_root}")
+    print(f"  Bootstrap version : {bootstrap_version}")
+    print(f"  Bootstrap revision: {bootstrap_revision}")
+    print(f"  Target directory  : {target_dir}")
+    print(f"  Profile           : {profile} — {PROFILES[profile]['description']}")
+    print(f"  Overwrite mode    : {'--force (overwrite existing)' if args.force else 'safe (skip existing)'}")
     print()
 
     results = {

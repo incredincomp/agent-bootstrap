@@ -275,6 +275,31 @@ Rules:
 
 ---
 
+## Version discipline
+
+The bootstrap version is defined in the `VERSION` file at the repository root.
+Version bumps are **deliberate decisions**, not incidental edits.
+
+Rules:
+- Do not change `VERSION` without also updating `CHANGELOG.md`.
+- Do not update `CHANGELOG.md` without also updating `VERSION` (unless adding to `[Unreleased]`).
+- Marker structure changes (field additions/renames/removals) require a version bump.
+  - Additive changes → minor bump.
+  - Breaking changes (rename/remove) → major bump.
+- Patch bumps are for documentation, template copy, and script bug fixes that do not
+  change marker structure or refresh behavior.
+- The `BOOTSTRAP_SOURCE_VERSION` and `BOOTSTRAP_SOURCE_REVISION` fields in the marker
+  are part of the contract — do not remove or rename them without a major version bump.
+- Refresh behavior must remain compatible with the documented policy in
+  `docs/BOOTSTRAP_VERSIONING.md`. Any change to refresh safety semantics requires
+  updating both the policy doc and the version.
+- Pre-version markers (those with a git SHA or empty value in `Bootstrap source version`)
+  should be treated as pre-0.13.0. Do not assume their profile or structure.
+- Changelog updates should accompany meaningful version changes. For trivial fixes,
+  adding to the `[Unreleased]` section is sufficient until the next release.
+
+---
+
 ## How to handle uncertainty
 
 When uncertain about intent:

@@ -35,8 +35,11 @@ PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
 BOOTSTRAP_REPO_REQUIRED_FILES = [
     "README.md",
     "AGENTS.md",
+    "CHANGELOG.md",
     "IMPLEMENTATION_TRACKER.md",
+    "VERSION",
     "bootstrap-manifest.yaml",
+    "docs/BOOTSTRAP_VERSIONING.md",
     "prompts/new-repo-bootstrap.md",
     "prompts/existing-repo-discovery.md",
     "prompts/resume-work.md",
@@ -238,6 +241,27 @@ def check_placeholders(repo_dir, file_list, verbose):
     return pass_count, len(failures), failures
 
 
+def check_version_file(repo_dir, verbose):
+    """Check that the VERSION file exists and contains a parseable semver string.
+    Returns (pass_count, fail_count, failures)."""
+    version_path = os.path.join(repo_dir, "VERSION")
+    if not os.path.isfile(version_path):
+        # Missing file is already caught by check_required_files; skip here
+        return 0, 0, []
+    try:
+        with open(version_path, "r", encoding="utf-8") as f:
+            version = f.read().strip()
+    except OSError as exc:
+        print(f"  [FAIL] Could not read VERSION: {exc}")
+        return 0, 1, [("VERSION", str(exc))]
+    if not re.match(r"^\d+\.\d+\.\d+", version):
+        print(f"  [FAIL] VERSION does not look like a semver string: {repr(version)}")
+        return 0, 1, [("VERSION", f"not a semver: {version!r}")]
+    if verbose:
+        print(f"  [PASS] VERSION: {version}")
+    return 1, 0, []
+
+
 def main():
     args = parse_args()
 
@@ -326,6 +350,17 @@ def main():
         else:
             print(f"  {p} passed, {f} invalid.")
         print()
+
+    # ── Check 3: VERSION file readability ─────────────────────────────────
+    print("=== Version file check ===")
+    p, f, _ = check_version_file(repo_dir, args.verbose)
+    total_pass += p
+    total_fail += f
+    if f == 0 and p > 0:
+        print(f"  VERSION file is present and parseable.")
+    elif f > 0:
+        print(f"  VERSION file check failed.")
+    print()
 
     # ── Summary ───────────────────────────────────────────────────────────
     print("=== Summary ===")
