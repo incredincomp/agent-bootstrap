@@ -28,6 +28,7 @@ bootstrap_repo_required_files:
   - VERSION
   - bootstrap-manifest.yaml
   - docs/BOOTSTRAP_VERSIONING.md
+  - docs/BOOTSTRAP_RELEASE_WORKFLOW.md
   - prompts/new-repo-bootstrap.md
   - prompts/existing-repo-discovery.md
   - prompts/resume-work.md
@@ -46,6 +47,7 @@ bootstrap_repo_required_files:
   - scripts/apply_bootstrap.py
   - scripts/run_fixture_selftest.py
   - scripts/refresh_bootstrap.py
+  - scripts/bootstrap_status.py
   - fixtures/targets/minimal-python-service/README.md
   - fixtures/targets/minimal-python-service/conftest.py
   - fixtures/targets/minimal-infra-repo/README.md
