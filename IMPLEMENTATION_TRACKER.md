@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 11 complete — Bootstrap Refresh / Upgrade Path**
+**Phase: Milestone 12 complete — Manifest-Driven Bootstrap Profiles**
 
 ---
 
@@ -32,6 +32,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 9 | End-to-End Fixtures and Self-Test Harness | ✅ Complete | 2 fixture repos, population data, self-test runner; both fixtures B:PASS C:PASS |
 | 10 | GitHub Actions CI Regression Gate | ✅ Complete | `.github/workflows/ci.yml` created; runs validate + self-test on push/PR |
 | 11 | Bootstrap Refresh / Upgrade Path | ✅ Complete | `refresh_bootstrap.py` created; manifest updated with refresh section; State D self-test; README/AGENTS updated |
+| 12 | Manifest-Driven Bootstrap Profiles | ✅ Complete | 5 profiles; `--profile` flag; profile written to marker; fixture proof B:PASS C:PASS D:PASS |
 
 ---
 
@@ -49,6 +50,20 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | Moved universal forbidden actions to the fixed list in AGENTS.md.template | Agents were filling `{{FORBIDDEN_ACTION_1/2}}` with generic content; concrete defaults + repo-specific override placeholders produce better output | All placeholders (rejected: too easy to leave blank) |
 | Created `scripts/apply_bootstrap.py` using static template mappings | Manifest-driven mapping was considered but the static list is simpler, readable, and correct for the current template set; can be made fully manifest-driven later if needed | Full manifest-parsing (deferred: adds complexity for negligible benefit now) |
 | apply_bootstrap.py fills only bootstrap-system placeholders in BOOTSTRAP_SOURCE.md | Repo-specific discovery content must remain agent-led; only metadata known at apply time (source URL, SHA, date) is filled automatically | Fill all placeholders automatically (rejected: would require guessing) |
+
+---
+
+## Decisions made in Milestone 12 (manifest-driven bootstrap profiles)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| Five initial profiles: generic, python-service, infra-repo, vscode-extension, kubernetes-platform | Covers the most common distinct repo families; bounded initial set as specified; each profile has clear applicability | Fewer profiles (rejected: problem statement required all five); more profiles (deferred: YAGNI) |
+| Only `AI_AGENT_VENDOR_KNOWLEDGE_BASE.md` has profile-specific variants | This is the template where repo-family-specific guidance (runtime, SDK, platform) is most relevant; all other templates are universal structural scaffolding | Per-profile variants for all templates (rejected: excessive complexity for marginal benefit) |
+| PROFILES dict in apply/refresh scripts (not runtime manifest parsing) | Maintains the static-fallback pattern already established; readable and predictable; no YAML parsing required at runtime | Runtime YAML parsing (deferred: consistent with existing apply_bootstrap.py design) |
+| apply fails clearly on unknown profiles; refresh falls back to generic with warning | Apply is the authoritative profile selection moment; unknown at apply time = mistake; unknown at refresh time (e.g., from old marker) = graceful degradation more appropriate | Both fail hard (rejected: would break refresh on repos bootstrapped without profiles) |
+| BOOTSTRAP_PROFILE auto-filled in marker at apply time | Profile is a bootstrap-system value (like date and version), not a repo-specific discovery value; consistent with existing auto-fill pattern | Leave for agent to fill (rejected: profile is known at apply time; no reason to leave it blank) |
+| Refresh reads profile from marker; no `--profile` flag on refresh | Profile is set at apply time and stored in the marker; refresh inherits it; adding a separate flag would create inconsistency risk | --profile flag on refresh (deferred: not needed; marker provides the authoritative value) |
+| Fixture proof: minimal-python-service → python-service; minimal-infra-repo → infra-repo | These fixtures already represent the right repo shapes; mapping to their natural profiles provides proof without new fixtures | New dedicated profile fixtures (rejected: existing fixtures already cover the shapes) |
 
 ---
 
@@ -195,6 +210,17 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | Self-test State D: minimal-python-service | ✅ Pass | 6 populated files skipped, 0 would change |
 | Self-test State D: minimal-infra-repo | ✅ Pass | 6 populated files skipped, 0 would change |
 | Full self-test with State D | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0; B:PASS C:PASS D:PASS for both fixtures |
+| apply_bootstrap.py --profile generic (dry-run) | ✅ Pass | 7 files [CREATED]; profile line printed; exits 0 |
+| apply_bootstrap.py --profile python-service | ✅ Pass | 7 files created; profile-specific AI_AGENT_VENDOR_KNOWLEDGE_BASE.md staged; exits 0 |
+| apply_bootstrap.py --profile infra-repo | ✅ Pass | 7 files created; infra-specific variant staged; exits 0 |
+| apply_bootstrap.py unknown profile | ✅ Pass | Exits 1 with clear error listing supported profiles |
+| BOOTSTRAP_PROFILE auto-filled in marker | ✅ Pass | marker shows "python-service" after apply with that profile |
+| refresh_bootstrap.py reads profile from marker | ✅ Pass | "Using profile: python-service" printed; profile-specific template used |
+| refresh_bootstrap.py falls back to generic on no profile | ✅ Pass | "Using profile: generic" when marker has no Bootstrap profile row |
+| validate_bootstrap.py detects 4 new profile template files | ✅ Pass | All 32 required files present; exits 0 |
+| Self-test: minimal-python-service profile=python-service B:PASS C:PASS D:PASS | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0 |
+| Self-test: minimal-infra-repo profile=infra-repo B:PASS C:PASS D:PASS | ✅ Pass | `python scripts/run_fixture_selftest.py` exits 0 |
+| Full self-test (all fixtures, all states) | ✅ Pass | Both fixtures B:PASS C:PASS D:PASS |
 
 ---
 
@@ -255,6 +281,31 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
+## Files created/modified in Milestone 12 (manifest-driven bootstrap profiles)
+
+### templates/profiles/ (new directory tree)
+- `templates/profiles/python-service/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template` — Python-service-specific guidance variant
+- `templates/profiles/infra-repo/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template` — IaC/infrastructure-specific guidance variant
+- `templates/profiles/vscode-extension/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template` — VS Code extension-specific guidance variant
+- `templates/profiles/kubernetes-platform/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template` — Kubernetes platform-specific guidance variant
+
+### templates/bootstrap/
+- `templates/bootstrap/BOOTSTRAP_SOURCE.md.template` — added `Bootstrap profile` row; updated comment block
+
+### scripts/
+- `scripts/apply_bootstrap.py` — added `PROFILES` dict; added `--profile` flag (default: `generic`); added `resolve_mappings()`; extended `render_marker()` to fill `{{BOOTSTRAP_PROFILE}}`; updated `main()` to use profile-aware mappings and print profile info
+- `scripts/refresh_bootstrap.py` — added `PROFILES` dict and `DEFAULT_PROFILE`; added `resolve_mappings()`; extended `detect_bootstrap_state()` to parse `Bootstrap profile` from marker; extended `render_marker()` to fill `{{BOOTSTRAP_PROFILE}}`; updated `main()` to read profile from marker and use profile-aware mappings
+- `scripts/validate_bootstrap.py` — added 4 profile template files to `BOOTSTRAP_REPO_REQUIRED_FILES`
+- `scripts/run_fixture_selftest.py` — added `FIXTURE_PROFILES` dict; updated `run_apply()` to accept `profile` parameter; updated `test_fixture()` to pass the fixture's profile to apply
+
+### Root
+- `AGENTS.md` — updated operational surface 2 (apply) to show `--profile`; added `## Bootstrap profiles` section with profile rules; added profile restriction to forbidden actions
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 12 recorded
+- `bootstrap-manifest.yaml` — added 4 profile template files to `bootstrap_repo_required_files`; added `BOOTSTRAP_PROFILE` to `auto_filled_placeholders`; added `profile:` field to fixture entries; added `## profiles:` section with all 5 profile definitions and template_overrides
+- `README.md` — added `## Bootstrap profiles` section; updated repository layout to show `templates/profiles/`; updated quick-start to show `--profile` example
+
+---
+
 ## Open improvements (future milestones)
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
@@ -263,6 +314,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 - [ ] Add a `jsonschema`-based validation mode (optional, behind `--strict` flag)
 - [x] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push ✅ Done (Milestone 10)
 - [x] Add a safe refresh/upgrade path for already-bootstrapped target repos ✅ Done (Milestone 11)
+- [x] Add manifest-driven bootstrap profiles ✅ Done (Milestone 12)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [ ] Consider adding a `CHANGELOG.md` when this repo has meaningful version history
@@ -270,12 +322,26 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 - [ ] Make `apply_bootstrap.py` and `refresh_bootstrap.py` fully read template mappings
   from `bootstrap-manifest.yaml` rather than the static fallback list (currently in sync;
   unifying reduces future drift)
+- [ ] Add profile-specific fixture proof data for vscode-extension and kubernetes-platform
+  (currently proven indirectly through apply dry-run; dedicated fixtures deferred)
+
+---
+
+## Known limitations (Milestone 12)
+
+- Profile selection is explicit only — there is no auto-detection or suggestion mode.
+- `vscode-extension` and `kubernetes-platform` profiles have templates but no dedicated
+  fixture proof fixtures. They are proven through syntax checks and manual dry-run
+  verification. A future milestone could add dedicated fixtures for these profiles.
+- The PROFILES dict in `apply_bootstrap.py` and `refresh_bootstrap.py` is a copy of the
+  same data. A future cleanup could unify these by reading from `bootstrap-manifest.yaml`
+  at runtime (deferred: consistent with existing static-list pattern).
 
 ---
 
 ## Next strongest bounded milestone
 
-**Milestone 12 — jsonschema-based strict validation (optional)**
+**Milestone 13 — jsonschema strict validation (optional `--strict` flag)**
 
 Scope:
 - Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)

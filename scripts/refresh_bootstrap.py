@@ -53,6 +53,48 @@ PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
 # Bootstrap marker path within a target repo
 BOOTSTRAP_MARKER_PATH = "bootstrap/BOOTSTRAP_SOURCE.md"
 
+# Supported profiles and their template overrides.
+# Mirrors PROFILES in apply_bootstrap.py — keep both in sync when adding profiles.
+PROFILES = {
+    "generic": {
+        "template_overrides": {},
+    },
+    "python-service": {
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/python-service/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "infra-repo": {
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/infra-repo/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "vscode-extension": {
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/vscode-extension/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "kubernetes-platform": {
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/kubernetes-platform/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+}
+
+DEFAULT_PROFILE = "generic"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Template → target-path mappings with refresh classification policy.
 #
@@ -175,14 +217,35 @@ def get_git_sha(repo_dir):
     return "unknown"
 
 
-def render_marker(content, bootstrap_version, refresh_date):
+def render_marker(content, bootstrap_version, refresh_date, profile):
     """Replace bootstrap-system placeholders in the marker template."""
     result = content
     for placeholder, value in MARKER_PLACEHOLDERS.items():
         result = result.replace(placeholder, value)
     result = result.replace("{{BOOTSTRAP_SOURCE_VERSION}}", bootstrap_version)
     result = result.replace("{{BOOTSTRAP_DATE}}", refresh_date)
+    result = result.replace("{{BOOTSTRAP_PROFILE}}", profile)
     return result
+
+
+def resolve_mappings(profile_name):
+    """
+    Return the effective template mappings for the given profile.
+
+    Starts from the common TEMPLATE_MAPPINGS and applies any profile-specific
+    source overrides for the given profile.  Falls back to 'generic' if the
+    profile is not recognised.
+    """
+    profile = PROFILES.get(profile_name, PROFILES[DEFAULT_PROFILE])
+    overrides = profile["template_overrides"]
+    resolved = []
+    for mapping in TEMPLATE_MAPPINGS:
+        dest = mapping["destination"]
+        if dest in overrides:
+            resolved.append({**mapping, "source": overrides[dest]})
+        else:
+            resolved.append(mapping)
+    return resolved
 
 
 def detect_bootstrap_state(target_dir):
@@ -195,6 +258,7 @@ def detect_bootstrap_state(target_dir):
         "marker_path": str or None,     # absolute path to marker if present
         "bootstrap_version": str or None,
         "bootstrap_date": str or None,
+        "bootstrap_profile": str or None,
       }
     """
     marker_abs = os.path.join(target_dir, BOOTSTRAP_MARKER_PATH)
@@ -204,10 +268,12 @@ def detect_bootstrap_state(target_dir):
             "marker_path": None,
             "bootstrap_version": None,
             "bootstrap_date": None,
+            "bootstrap_profile": None,
         }
 
     version = None
     date = None
+    profile = None
     try:
         with open(marker_abs, "r", encoding="utf-8") as f:
             for line in f:
@@ -224,6 +290,12 @@ def detect_bootstrap_state(target_dir):
                         candidate = parts[-1].strip()
                         if candidate and candidate != "{{BOOTSTRAP_DATE}}":
                             date = candidate
+                if "Bootstrap profile" in line:
+                    parts = [p.strip() for p in line.strip().strip("|").split("|")]
+                    if len(parts) >= 2:
+                        candidate = parts[-1].strip()
+                        if candidate and candidate != "{{BOOTSTRAP_PROFILE}}":
+                            profile = candidate
     except OSError:
         pass
 
@@ -232,6 +304,7 @@ def detect_bootstrap_state(target_dir):
         "marker_path": marker_abs,
         "bootstrap_version": version,
         "bootstrap_date": date,
+        "bootstrap_profile": profile,
     }
 
 
@@ -305,11 +378,24 @@ def main():
             print(f"  Prior version     : {state['bootstrap_version']}")
         if state["bootstrap_date"]:
             print(f"  Prior date        : {state['bootstrap_date']}")
+        if state["bootstrap_profile"]:
+            print(f"  Prior profile     : {state['bootstrap_profile']}")
     else:
         print(
             f"  Bootstrap marker  : not found — "
             f"target may not have been bootstrapped yet (consider apply_bootstrap.py)"
         )
+    print()
+
+    # Resolve profile from marker; fall back to generic if not recorded
+    current_profile = state.get("bootstrap_profile") or DEFAULT_PROFILE
+    if current_profile not in PROFILES:
+        print(
+            f"  [WARN] Unrecognised profile '{current_profile}' in marker — "
+            f"falling back to '{DEFAULT_PROFILE}'."
+        )
+        current_profile = DEFAULT_PROFILE
+    print(f"  Using profile     : {current_profile}")
     print()
 
     # ── Classify and process each managed file ───────────────────────────────
@@ -324,7 +410,9 @@ def main():
         "errors": [],
     }
 
-    for mapping in TEMPLATE_MAPPINGS:
+    effective_mappings = resolve_mappings(current_profile)
+
+    for mapping in effective_mappings:
         source_path = os.path.join(bootstrap_root, mapping["source"])
         dest_path = os.path.join(target_dir, mapping["destination"])
         dest_label = mapping["destination"]
@@ -349,7 +437,7 @@ def main():
         compare_content = template_content
         write_content = template_content
         if policy == "marker":
-            compare_content = render_marker(template_content, bootstrap_version, refresh_date)
+            compare_content = render_marker(template_content, bootstrap_version, refresh_date, current_profile)
             write_content = compare_content
 
         classification = classify_file(compare_content, dest_path, policy)

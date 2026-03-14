@@ -46,8 +46,10 @@ This repository has four operational surfaces:
 
 2. **Target repo scaffold application** — stages canonical template files into a
    target repository so an agent can populate them with real, evidence-based content.
+   Supports optional `--profile` to select a profile-specific template variant.
    ```
    python scripts/apply_bootstrap.py --target-dir /path/to/target-repo
+   python scripts/apply_bootstrap.py --target-dir /path/to/target-repo --profile python-service
    ```
 
 3. **Target repo refresh / upgrade** — updates managed files in an already-bootstrapped
@@ -125,6 +127,7 @@ Do not:
 - Silently change the semantics of prompt files.
 - Blindly overwrite populated target-repo files during refresh — always classify first.
 - Change apply, refresh, or validation logic in ways that break safe-by-default behavior.
+- Add new profiles without updating all four locations: PROFILES dicts, manifest, required-files list, and fixture/validation proof.
 
 ---
 
@@ -213,7 +216,39 @@ Rules:
 
 ---
 
-## Prompt-writing rules
+## Bootstrap profiles
+
+Profiles provide bounded scaffold shape variation for different target-repo families.
+They are implemented as manifest-driven template overlays — a small and explicit mechanism.
+
+### Profile rules for agents
+
+- **Profiles are bounded overlays, not permission to guess repo facts.**
+  A profile selects which template variant to stage. It does not auto-populate
+  repo-specific content. All `{{PLACEHOLDER}}` markers remain for agent population.
+
+- **Common/core bootstrap behavior is authoritative and applies to all profiles.**
+  Profile overrides are a narrow exception for templates where family-specific guidance
+  materially improves usefulness (currently: `AI_AGENT_VENDOR_KNOWLEDGE_BASE.md`).
+
+- **Profile additions must stay small and explicit.**
+  Add a new profile template only if it provides clearly distinct and useful guidance.
+  Do not create profile variants that duplicate the generic template with trivial changes.
+
+- **Future profile expansion must preserve CI/self-test coverage.**
+  Any new profile must be added to `PROFILES` in `apply_bootstrap.py` and `refresh_bootstrap.py`,
+  to `bootstrap-manifest.yaml`, to `BOOTSTRAP_REPO_REQUIRED_FILES` in `validate_bootstrap.py`,
+  and must be proven through a fixture or explicit validation run before declaring it operational.
+
+- **Prefer extending manifest mappings over ad hoc special cases in scripts.**
+  Profile logic lives in the `PROFILES` dict (scripts) and the `profiles:` section (manifest).
+  Do not scatter profile-conditional logic across unrelated parts of the codebase.
+
+- **The apply script must always fail clearly on an unknown profile.**
+  Do not silently fall back to `generic` on an unrecognised profile at apply time.
+  Refresh may fall back to `generic` with a warning if the marker records an unknown profile.
+
+---
 
 Prompts live in `prompts/`. They are copy-paste-ready instructions for agent sessions.
 

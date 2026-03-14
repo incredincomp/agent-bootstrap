@@ -1,0 +1,111 @@
+# AI Agent Vendor Knowledge Base — {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+Profile: kubernetes-platform
+This file records vendor-specific knowledge for a Kubernetes platform or operator repository.
+Fill based on actual evidence from the repo (manifests, operator code, Helm charts, README).
+If a section is not applicable, write "Not applicable — [reason]" rather than deleting the section.
+Do not speculate about CRDs, controllers, or cluster specifics not actually present in this repo.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file captures Kubernetes platform, operator SDK, and cloud provider knowledge that an AI agent
+needs to work effectively in this repository. It is intended to prevent agents from using stale or
+incorrect assumptions about Kubernetes API versions, CRD schemas, and cluster configurations.
+
+---
+
+## Kubernetes and operator tooling
+
+<!-- Record the Kubernetes target version, operator framework, and toolchain.
+     Example:
+       Target Kubernetes version: 1.27+ (see go.mod or Dockerfile FROM base)
+       Operator framework: controller-runtime v0.17 / operator-sdk v1.34
+       CRD API groups: widgets.example.com/v1alpha1
+       Packaging: Helm chart in charts/ / Kustomize in config/
+     Fill from go.mod, Makefile, config/crd/bases/, or README. -->
+
+- **Target Kubernetes version:** <!-- fill from go.mod k8s.io/client-go or docs -->
+- **Operator framework / SDK:** {{BUILD_SYSTEM}}
+- **Entry point:** `{{ENTRY_POINT_PATH}}`
+- **Build command:** `{{BUILD_COMMAND}}`
+- **Test command:** `{{TEST_COMMAND}}`
+
+---
+
+## AI / ML frameworks in use
+
+| Framework / SDK | Version | Purpose | Key files |
+|----------------|---------|---------|-----------|
+| `{{AI_FRAMEWORK_1}}` | `{{AI_FRAMEWORK_1_VERSION}}` | {{AI_FRAMEWORK_1_PURPOSE}} | `{{AI_FRAMEWORK_1_KEY_FILES}}` |
+
+<!-- For Kubernetes platform repos, this is usually "Not applicable" unless the operator
+     manages AI/ML workloads (e.g., Kubeflow, GPU operators, model serving controllers). -->
+
+---
+
+## External AI APIs
+
+| API | Provider | Usage | Auth method | Config location |
+|-----|----------|-------|-------------|----------------|
+| `{{AI_API_1}}` | `{{AI_API_1_PROVIDER}}` | {{AI_API_1_USAGE}} | {{AI_API_1_AUTH}} | `{{AI_API_1_CONFIG}}` |
+
+<!-- Usually "Not applicable" for platform/operator repos unless the platform provisions AI APIs. -->
+
+---
+
+## Cloud platform specifics
+
+- **Cloud provider:** {{CLOUD_PROVIDER}}
+- **Key services used:** {{CLOUD_SERVICES}}
+- **Infrastructure definition:** `{{IAC_CONFIG_PATH}}`
+- **Deployment target:** {{DEPLOYMENT_TARGET}}
+
+<!-- Describe the cluster target:
+     - Managed Kubernetes service (EKS, GKE, AKS) or self-hosted
+     - Cluster version compatibility matrix
+     - Node pools, GPU nodes, or special scheduling requirements
+     - Image registry (ECR, GCR, ACR, Docker Hub) and pull secret management -->
+
+---
+
+## Vendor SDK notes
+
+{{VENDOR_SDK_NOTES}}
+
+<!-- Record Kubernetes and operator framework version-specific notes:
+     - API version migrations (e.g., apps/v1beta1 → apps/v1)
+     - CRD schema changes across versions
+     - controller-runtime or operator-sdk breaking changes
+     - Admission webhook certificate management approach
+     - kubebuilder markers or code-generation notes
+     Example:
+     - "CRD uses v1 CEL validation rules — requires Kubernetes 1.25+."
+     - "controller-runtime v0.17 changed the SetupWithManager signature — see internal/controller/."
+     If none, write "No significant vendor SDK notes." -->
+
+---
+
+## Model / API version pinning
+
+{{MODEL_VERSION_NOTES}}
+
+<!-- For Kubernetes platform repos: usually "Not applicable" unless the operator
+     manages AI model serving or interacts with AI model APIs.
+     If applicable, record model IDs, endpoint ARNs, or service quotas. -->
+
+---
+
+## Platform constraints
+
+{{PLATFORM_CONSTRAINTS}}
+
+<!-- Record Kubernetes platform constraints:
+     - Minimum Kubernetes version required
+     - Required CRDs or cluster-level resources
+     - RBAC permissions required by the operator service account
+     - Admission webhook requirements (cert-manager dependency, etc.)
+     - Image build constraints (multi-arch, distroless base images)
+     Example: "Requires Kubernetes >= 1.27. Operator service account needs get/list/watch on all namespaces."
+     If none, write "No significant platform constraints identified." -->

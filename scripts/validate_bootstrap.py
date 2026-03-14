@@ -61,6 +61,10 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "fixtures/population/minimal-python-service.json",
     "fixtures/population/minimal-infra-repo.json",
     "fixtures/README.md",
+    "templates/profiles/python-service/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template",
+    "templates/profiles/infra-repo/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template",
+    "templates/profiles/vscode-extension/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template",
+    "templates/profiles/kubernetes-platform/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template",
 ]
 
 # JSON files that must be parseable as valid JSON

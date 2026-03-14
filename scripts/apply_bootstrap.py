@@ -28,6 +28,74 @@ import shutil
 import sys
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Supported profiles.
+#
+# Each profile entry may define 'template_overrides': a mapping from
+# destination path → source template path (relative to the bootstrap repo root)
+# that replaces the common template for that destination.
+#
+# Generic uses all common templates with no overrides.
+# Other profiles override specific templates where profile-specific guidance
+# materially improves usefulness for that repo family.
+# ─────────────────────────────────────────────────────────────────────────────
+PROFILES = {
+    "generic": {
+        "description": "General-purpose profile. Uses all common templates with no overrides.",
+        "template_overrides": {},
+    },
+    "python-service": {
+        "description": (
+            "Python service repositories. Adds Python-specific guidance "
+            "in the vendor knowledge base."
+        ),
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/python-service/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "infra-repo": {
+        "description": (
+            "Infrastructure/platform repositories (Terraform, Pulumi, Ansible, etc.). "
+            "Adds infrastructure-specific guidance in the vendor knowledge base."
+        ),
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/infra-repo/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "vscode-extension": {
+        "description": (
+            "VS Code extension repositories. Adds extension-specific guidance "
+            "in the vendor knowledge base."
+        ),
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/vscode-extension/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+    "kubernetes-platform": {
+        "description": (
+            "Kubernetes platform and operator repositories. Adds platform-specific "
+            "guidance in the vendor knowledge base."
+        ),
+        "template_overrides": {
+            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
+                "templates/profiles/kubernetes-platform/docs/ai/"
+                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
+            ),
+        },
+    },
+}
+
+DEFAULT_PROFILE = "generic"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Template → target-path mappings driven by bootstrap-manifest.yaml entries.
 # We keep a static fallback here so the script works even if manifest parsing
 # is extended later.  The source paths are relative to the bootstrap repo root.
@@ -103,6 +171,16 @@ def parse_args():
         help="Overwrite existing files. Default behavior skips existing files.",
     )
     parser.add_argument(
+        "--profile",
+        default=DEFAULT_PROFILE,
+        choices=sorted(PROFILES.keys()),
+        metavar="PROFILE",
+        help=(
+            f"Bootstrap profile to apply. Choices: {', '.join(sorted(PROFILES.keys()))}. "
+            f"Default: {DEFAULT_PROFILE}."
+        ),
+    )
+    parser.add_argument(
         "--bootstrap-version",
         default=None,
         help=(
@@ -111,6 +189,29 @@ def parse_args():
         ),
     )
     return parser.parse_args()
+
+
+def resolve_mappings(profile_name):
+    """
+    Return the effective template mappings for the given profile.
+
+    Starts from the common TEMPLATE_MAPPINGS and applies any profile-specific
+    source overrides, replacing the template source path for overridden destinations.
+    """
+    if profile_name not in PROFILES:
+        raise ValueError(
+            f"Unknown profile '{profile_name}'. "
+            f"Supported profiles: {', '.join(sorted(PROFILES.keys()))}"
+        )
+    overrides = PROFILES[profile_name]["template_overrides"]
+    resolved = []
+    for mapping in TEMPLATE_MAPPINGS:
+        dest = mapping["destination"]
+        if dest in overrides:
+            resolved.append({**mapping, "source": overrides[dest]})
+        else:
+            resolved.append(mapping)
+    return resolved
 
 
 def find_bootstrap_root(script_path):
@@ -149,13 +250,14 @@ def get_git_sha(repo_dir):
     return "unknown"
 
 
-def render_marker(content, bootstrap_version, apply_date):
+def render_marker(content, bootstrap_version, apply_date, profile):
     """Replace known bootstrap-system placeholders in the marker file content."""
     result = content
     for placeholder, value in MARKER_PLACEHOLDERS.items():
         result = result.replace(placeholder, value)
     result = result.replace("{{BOOTSTRAP_SOURCE_VERSION}}", bootstrap_version)
     result = result.replace("{{BOOTSTRAP_DATE}}", apply_date)
+    result = result.replace("{{BOOTSTRAP_PROFILE}}", profile)
     # BOOTSTRAP_NOTES is intentionally left for the agent to fill
     return result
 
@@ -195,7 +297,7 @@ def apply_template(source_path, dest_path, mapping, ctx):
         return f"error:could not read source: {exc}"
 
     if is_marker:
-        content = render_marker(content, ctx["bootstrap_version"], ctx["apply_date"])
+        content = render_marker(content, ctx["bootstrap_version"], ctx["apply_date"], ctx["profile"])
 
     if dry_run:
         if dest_exists:
@@ -227,6 +329,15 @@ def main():
         print(f"ERROR: Target directory does not exist: {target_dir}", file=sys.stderr)
         sys.exit(1)
 
+    profile = args.profile
+    if profile not in PROFILES:
+        print(
+            f"ERROR: Unknown profile '{profile}'. "
+            f"Supported profiles: {', '.join(sorted(PROFILES.keys()))}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     bootstrap_version = args.bootstrap_version or get_git_sha(bootstrap_root)
     apply_date = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
@@ -235,6 +346,7 @@ def main():
         "apply_date": apply_date,
         "dry_run": args.dry_run,
         "force": args.force,
+        "profile": profile,
     }
 
     mode_label = "[DRY RUN] " if args.dry_run else ""
@@ -242,6 +354,7 @@ def main():
     print(f"  Bootstrap source : {bootstrap_root}")
     print(f"  Bootstrap version: {bootstrap_version}")
     print(f"  Target directory : {target_dir}")
+    print(f"  Profile          : {profile} — {PROFILES[profile]['description']}")
     print(f"  Overwrite mode   : {'--force (overwrite existing)' if args.force else 'safe (skip existing)'}")
     print()
 
@@ -253,7 +366,9 @@ def main():
         "errors": [],
     }
 
-    for mapping in TEMPLATE_MAPPINGS:
+    effective_mappings = resolve_mappings(profile)
+
+    for mapping in effective_mappings:
         source_path = os.path.join(bootstrap_root, mapping["source"])
         dest_path = os.path.join(target_dir, mapping["destination"])
 

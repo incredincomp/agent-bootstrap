@@ -1,0 +1,114 @@
+# AI Agent Vendor Knowledge Base — {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+Profile: vscode-extension
+This file records vendor-specific knowledge for a VS Code extension repository.
+Fill based on actual evidence from the repo (package.json, src/, README).
+If a section is not applicable, write "Not applicable — [reason]" rather than deleting the section.
+Do not speculate about activation events, commands, or APIs not actually implemented.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file captures VS Code extension API and marketplace knowledge that an AI agent needs to work
+effectively in this repository. It is intended to prevent agents from using stale or incorrect
+assumptions about extension APIs, activation events, and publishing workflows.
+
+---
+
+## VS Code extension specifics
+
+<!-- Record the extension entry points and activation model.
+     Example:
+       Engine: vscode ^1.85.0 (see package.json engines.vscode)
+       Entry point: src/extension.ts (activate / deactivate exports)
+       Auto-activation: VS Code 1.74+ infers activation from contribution points.
+         Explicit activationEvents in package.json are optional (deprecated for most cases)
+         but still needed for events like onStartupFinished or onFileSystem.
+       Contribution points: commands, menus, languages, grammars
+     Fill from package.json contributes, activationEvents (if present), and main fields. -->
+
+- **VS Code engine version:** <!-- fill from package.json engines.vscode -->
+- **Extension entry point:** `{{ENTRY_POINT_PATH}}`
+- **Package manager:** {{PACKAGE_MANAGER}}
+- **Build command:** `{{BUILD_COMMAND}}`
+- **Test command:** `{{TEST_COMMAND}}`
+
+---
+
+## AI / ML frameworks in use
+
+| Framework / SDK | Version | Purpose | Key files |
+|----------------|---------|---------|-----------|
+| `{{AI_FRAMEWORK_1}}` | `{{AI_FRAMEWORK_1_VERSION}}` | {{AI_FRAMEWORK_1_PURPOSE}} | `{{AI_FRAMEWORK_1_KEY_FILES}}` |
+
+<!-- If the extension calls an AI API (e.g., GitHub Copilot API, OpenAI, Anthropic),
+     record the integration point and configuration here. -->
+
+---
+
+## External AI APIs
+
+| API | Provider | Usage | Auth method | Config location |
+|-----|----------|-------|-------------|----------------|
+| `{{AI_API_1}}` | `{{AI_API_1_PROVIDER}}` | {{AI_API_1_USAGE}} | {{AI_API_1_AUTH}} | `{{AI_API_1_CONFIG}}` |
+
+<!-- Example:
+     | GitHub Copilot API | GitHub | Inline completions in src/completions.ts | VS Code auth token | N/A (VS Code manages auth) |
+     If no external AI APIs are used, write "Not applicable." -->
+
+---
+
+## Cloud platform specifics
+
+- **Cloud provider:** {{CLOUD_PROVIDER}}
+- **Key services used:** {{CLOUD_SERVICES}}
+- **Infrastructure definition:** `{{IAC_CONFIG_PATH}}`
+- **Deployment target:** {{DEPLOYMENT_TARGET}}
+
+<!-- For VS Code extensions, deployment target is typically the VS Code Marketplace.
+     Note any backend services the extension calls at runtime. -->
+
+---
+
+## Vendor SDK notes
+
+{{VENDOR_SDK_NOTES}}
+
+<!-- Record VS Code API version-specific notes:
+     - APIs that changed between VS Code versions (check CHANGELOG.md for engine bumps)
+     - Proposed APIs in use (require enableProposedApi in package.json)
+     - Known issues with specific VS Code versions
+     - vsce packaging or publishing notes
+     Example:
+     - "Uses the proposed `inlineCompletions` API — requires vscode.proposed.d.ts from the target engine version."
+     - "vsce ^2.15 required for correct VSIX packaging with workspace dependencies."
+     If none, write "No significant vendor SDK notes." -->
+
+---
+
+## Model / API version pinning
+
+{{MODEL_VERSION_NOTES}}
+
+<!-- If the extension calls AI model APIs, record:
+     - Which model versions are pinned or recommended
+     - Any prompt formats that are model-specific
+     - Rate limits or token constraints relevant to usage
+     Example: "Calls gpt-4o via OpenAI SDK. Model ID is read from configuration key myext.modelId."
+     If not applicable, write "Not applicable." -->
+
+---
+
+## Platform constraints
+
+{{PLATFORM_CONSTRAINTS}}
+
+<!-- Record VS Code extension constraints:
+     - Minimum VS Code engine version
+     - Node.js version required for the development environment
+     - OS constraints (e.g., native addons that limit platform support)
+     - Extension host process constraints (memory, startup time)
+     - Marketplace publisher requirements or token setup
+     Example: "Requires VS Code >= 1.85. Node 18+ for the build toolchain. Marketplace publishing uses VSCE_PAT."
+     If none, write "No significant platform constraints identified." -->

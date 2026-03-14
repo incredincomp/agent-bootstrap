@@ -46,6 +46,10 @@ bootstrap_repo_required_files:
   - fixtures/population/minimal-python-service.json
   - fixtures/population/minimal-infra-repo.json
   - fixtures/README.md
+  - templates/profiles/python-service/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+  - templates/profiles/infra-repo/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+  - templates/profiles/vscode-extension/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+  - templates/profiles/kubernetes-platform/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
 
 # ─────────────────────────────────────────────
 # Files required in a bootstrapped TARGET repo
@@ -212,6 +216,7 @@ apply:
     - BOOTSTRAP_DATE
     - BOOTSTRAP_AGENT
     - BOOTSTRAP_PROMPT_USED
+    - BOOTSTRAP_PROFILE
 
 # ─────────────────────────────────────────────
 # Refresh / upgrade path configuration
@@ -265,6 +270,65 @@ refresh:
   #   safe-refresh  → refreshed (template updated; no local content to lose)
   #   populated     → skipped and flagged (requires --force to overwrite)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Bootstrap profiles
+# Drives profile-aware apply and refresh behavior.
+#
+# Each profile has:
+#   description        : human-readable purpose statement
+#   template_overrides : map of destination path → profile-specific source template
+#                        (relative to bootstrap repo root)
+#
+# The common/core template mappings (under apply.template_mappings) are applied
+# first for all profiles.  template_overrides replaces the source for specific
+# destinations.  An empty template_overrides means "use all common templates".
+#
+# Refresh reads the current profile from the bootstrap marker and applies the
+# same overrides during upgrade.
+# ─────────────────────────────────────────────────────────────────────────────
+profiles:
+  generic:
+    description: >
+      General-purpose profile. Suitable for any repository not covered by a more
+      specific profile. Uses all common/core templates with no overrides.
+    template_overrides: {}
+
+  python-service:
+    description: >
+      Bootstrap profile for Python service repositories. Adds Python-specific
+      guidance in the vendor knowledge base (runtime, package management,
+      deployment model, Python SDK notes).
+    template_overrides:
+      docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md:
+        source: templates/profiles/python-service/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+
+  infra-repo:
+    description: >
+      Bootstrap profile for infrastructure/platform repositories (e.g., Terraform,
+      Pulumi, Ansible, CloudFormation). Adds IaC-specific guidance in the vendor
+      knowledge base (provider config, state management, tool version constraints).
+    template_overrides:
+      docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md:
+        source: templates/profiles/infra-repo/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+
+  vscode-extension:
+    description: >
+      Bootstrap profile for VS Code extension repositories. Adds extension-specific
+      guidance in the vendor knowledge base (VS Code API version, activation events,
+      contribution points, marketplace publishing).
+    template_overrides:
+      docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md:
+        source: templates/profiles/vscode-extension/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+
+  kubernetes-platform:
+    description: >
+      Bootstrap profile for Kubernetes platform and operator repositories. Adds
+      platform-specific guidance in the vendor knowledge base (operator framework,
+      CRD API versions, RBAC requirements, cluster compatibility).
+    template_overrides:
+      docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md:
+        source: templates/profiles/kubernetes-platform/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template
+
 # ─────────────────────────────────────────────
 # End-to-end fixture self-test configuration
 # ─────────────────────────────────────────────
@@ -281,11 +345,13 @@ fixtures:
   fixtures:
     - name: minimal-python-service
       shape: code-oriented (Python service)
+      profile: python-service
       target_dir: fixtures/targets/minimal-python-service
       population_file: fixtures/population/minimal-python-service.json
 
     - name: minimal-infra-repo
       shape: infrastructure/docs-oriented (Terraform)
+      profile: infra-repo
       target_dir: fixtures/targets/minimal-infra-repo
       population_file: fixtures/population/minimal-infra-repo.json
 

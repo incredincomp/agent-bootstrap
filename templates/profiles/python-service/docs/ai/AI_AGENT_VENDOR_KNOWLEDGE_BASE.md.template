@@ -1,0 +1,109 @@
+# AI Agent Vendor Knowledge Base — {{REPO_NAME}}
+
+<!-- TEMPLATE INSTRUCTIONS (remove this block when filled):
+Profile: python-service
+This file records vendor-specific AI and platform knowledge for a Python service repository.
+Fill based on actual evidence from the repo (imports, pyproject.toml, requirements files, README).
+If a section is not applicable, write "Not applicable — [reason]" rather than deleting the section.
+Do not speculate about packages or APIs not actually present in this repo.
+-->
+
+**Last updated:** {{LAST_UPDATED_DATE}}
+
+This file captures vendor-specific and Python ecosystem knowledge that an AI agent needs to work
+effectively in this repository. It is intended to prevent agents from using stale or incorrect
+assumptions about packages, APIs, and Python platform specifics.
+
+---
+
+## Python runtime and package management
+
+<!-- Record the Python version, virtual environment approach, and package manager in use.
+     Example:
+       Runtime: Python 3.11 (see .python-version or pyproject.toml requires-python)
+       Package manager: pip with pyproject.toml / Poetry / uv
+       Virtual environment: .venv/ (excluded from version control)
+     Fill from evidence in pyproject.toml, setup.cfg, requirements*.txt, or README. -->
+
+- **Runtime version:** {{RUNTIME_VERSION}}
+- **Package manager:** {{PACKAGE_MANAGER}}
+- **Install command:** `{{INSTALL_COMMAND}}`
+- **Build command:** `{{BUILD_COMMAND}}`
+
+---
+
+## AI / ML frameworks in use
+
+| Framework / SDK | Version | Purpose | Key files |
+|----------------|---------|---------|-----------|
+| `{{AI_FRAMEWORK_1}}` | `{{AI_FRAMEWORK_1_VERSION}}` | {{AI_FRAMEWORK_1_PURPOSE}} | `{{AI_FRAMEWORK_1_KEY_FILES}}` |
+
+<!-- If no AI/ML frameworks are used, write:
+     "Not applicable — this repository does not use AI/ML frameworks directly." -->
+
+---
+
+## External AI APIs
+
+| API | Provider | Usage | Auth method | Config location |
+|-----|----------|-------|-------------|----------------|
+| `{{AI_API_1}}` | `{{AI_API_1_PROVIDER}}` | {{AI_API_1_USAGE}} | {{AI_API_1_AUTH}} | `{{AI_API_1_CONFIG}}` |
+
+<!-- Example:
+     | OpenAI Chat Completions | OpenAI | Generates summaries in src/summarizer.py | API key via env var OPENAI_API_KEY | .env.example |
+     If no external AI APIs are used, write "Not applicable." -->
+
+---
+
+## Cloud platform specifics
+
+- **Cloud provider:** {{CLOUD_PROVIDER}}
+- **Key services used:** {{CLOUD_SERVICES}}
+- **Infrastructure definition:** `{{IAC_CONFIG_PATH}}`
+- **Deployment target:** {{DEPLOYMENT_TARGET}}
+
+<!-- For Python services, note how the service is deployed:
+     containerized (Docker/Kubernetes), serverless (Lambda, Cloud Functions),
+     platform-as-a-service (Heroku, App Engine), or bare VM.
+     Include any cloud-SDK-specific patterns (boto3, google-cloud-*, azure-sdk). -->
+
+---
+
+## Vendor SDK notes
+
+{{VENDOR_SDK_NOTES}}
+
+<!-- Record any important version-specific behaviors, deprecations, or gotchas for
+     Python packages and vendor SDKs used in this repo.
+     Example:
+     - "requests 2.31+ changed how urllib3 retry behavior works — see src/http_client.py"
+     - "The boto3 S3 client used here requires the `ACL` parameter to be omitted for
+        S3 buckets with Object Ownership enforced."
+     If none, write "No significant vendor SDK notes." -->
+
+---
+
+## Model / API version pinning
+
+{{MODEL_VERSION_NOTES}}
+
+<!-- If this repo uses AI models (e.g., OpenAI, Anthropic, Vertex AI), record:
+     - Which model versions are pinned or recommended
+     - Any prompt formats that are model-specific
+     - Any token limits or context window constraints relevant to usage
+     Example: "Uses gpt-4o-2024-05-13. Prompts are structured for the ChatCompletion messages API."
+     If not applicable, write "Not applicable." -->
+
+---
+
+## Platform constraints
+
+{{PLATFORM_CONSTRAINTS}}
+
+<!-- Record Python-service-specific constraints:
+     - Minimum Python version enforced (pyproject.toml requires-python)
+     - OS or architecture constraints (e.g., Linux-only native dependencies)
+     - Rate limits on external APIs
+     - Required environment variables (list non-secret ones here; never list actual secrets)
+     Example: "Requires Python 3.11+. Depends on a Linux-only C extension (uvloop)."
+     If none, write "No significant platform constraints identified." -->
