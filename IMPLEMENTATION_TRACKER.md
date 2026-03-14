@@ -37,6 +37,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 16 | Target Repo Bootstrap Doctor / Audit Mode | ✅ Complete | `bootstrap_doctor.py`; 6 health states; State F fixture proof; README/AGENTS/tracker updated |
 | 17 | Shared Bootstrap Core and Contract Tests | ✅ Complete | `bootstrap_core.py`; 6 scripts refactored; 39 contract tests; CI updated; 41 required files, 46 total checks |
 | 18 | Doctor / Audit Contract Test Expansion | ✅ Complete | `tests/test_bootstrap_doctor.py`; 77 diagnosis contract tests; 42 required files, 47 total checks |
+| 19 | Target Repo Audit JSON Schema Stabilization | ✅ Complete | `schemas/bootstrap_doctor_report.schema.json`; `--json` stabilized with `schema_version` and structured recommendations; 33 JSON contract tests; 43 required files, 49 total checks |
 
 ---
 
@@ -182,6 +183,62 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
   subprocess integration.
 - No fixture for `stale-version-review-recommended` was added to State F; this state is
   covered by unit tests but not the end-to-end fixture harness (out of scope).
+
+---
+
+## Milestone 19 — Target Repo Audit JSON Schema Stabilization
+
+**Objective:** Stabilize the machine-readable JSON contract for `bootstrap_doctor.py --json`
+so downstream tooling can depend on it safely without coupling to human-readable text output.
+
+**Files created:**
+- `schemas/bootstrap_doctor_report.schema.json` — formal JSON Schema (draft-07) for doctor audit output
+
+**Files updated:**
+- `scripts/bootstrap_doctor.py` — added `DOCTOR_REPORT_SCHEMA_VERSION = "1.0.0"`,
+  `_recommendations_to_structured()` helper, and updated `print_json_report()` to include
+  `schema_version` and convert recommendations to structured objects (`{"type": "command"|"note", "value": "..."}`)
+- `scripts/validate_bootstrap.py` — added `schemas/bootstrap_doctor_report.schema.json`
+  to `BOOTSTRAP_REPO_REQUIRED_FILES` and `JSON_FILES_TO_VALIDATE`
+- `bootstrap-manifest.yaml` — added new schema to `bootstrap_repo_required_files`
+- `tests/test_bootstrap_doctor.py` — added 33 JSON contract tests across four new test classes:
+  `TestJsonSchemaPresence`, `TestJsonReportShape`, `TestJsonReportFixtureStates`,
+  `TestRecommendationsToStructured`
+- `README.md` — added "Machine-readable JSON output contract" subsection with schema reference,
+  stability guarantees table, and schema in directory listing
+- `AGENTS.md` — added rules for JSON contract surface and schema/test update requirements
+
+**JSON contract design chosen:**
+- Schema version: `1.0.0` (independent field in JSON, separate from bootstrap repo version)
+- Required fields: `schema_version`, `target_dir`, `bootstrapped`, `marker_status`,
+  `marker_era`, `required_files_status`, `missing_files`, `placeholder_status`,
+  `files_with_placeholders`, `total_placeholder_count`, `health_state`, `recommendations`
+- Bounded enums for all classification fields
+- Structured recommendations: `[{"type": "command"|"note", "value": "..."}]` — machine-parseable
+  without string-matching; no `#`-prefixed comment strings in JSON output
+- Optional fields: `recorded_version`, `source_version`, `recorded_profile`, `suggested_profile`,
+  `profile_confidence`, `profile_alignment` (present but nullable)
+
+**Versioning semantics:**
+- `DOCTOR_REPORT_SCHEMA_VERSION` in `bootstrap_doctor.py` is the contract version
+- patch: additive optional fields or clarifications
+- minor: new required fields or enum additions
+- major: renamed/removed required fields or semantically breaking changes
+
+**Validation performed:**
+- `python scripts/validate_bootstrap.py` → 43 files present, 49 checks passed
+- `python -m unittest discover -s tests -p 'test_*.py' -v` → 153 tests, all passed
+- `python scripts/run_fixture_selftest.py` → B:PASS C:PASS D:PASS E:PASS F:PASS for both fixtures
+- `python scripts/bootstrap_doctor.py --target-dir <dir> --json` → conforms to schema with
+  `schema_version`, structured recommendations, bounded enum values
+
+**Known limitations (Milestone 19):**
+- The JSON schema is not validated at runtime by `bootstrap_doctor.py` itself (no `jsonschema`
+  dependency added — stdlib only). Schema conformance is proven by contract tests.
+- `profile-mismatch-review-recommended` state not covered by `TestJsonReportFixtureStates`
+  (fixture integration); covered by unit tests in prior milestone.
+- Schema does not validate per-file details beyond list membership — deliberate to keep contract
+  small and stable.
 
 ---
 
@@ -669,12 +726,13 @@ See "Known limitations" above under the Milestone 14 entry.
 
 ## Next strongest bounded milestone
 
-**Milestone 16 — jsonschema strict validation (optional `--strict` flag)**
+**Milestone 20 — CHANGELOG and VERSION bump for Milestone 19**
+
+Update CHANGELOG.md and VERSION to reflect the Milestone 19 release (JSON schema stabilization).
 
 Scope:
-- Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)
-  to validate `artifacts/ai/repo_discovery.json` against `schemas/repo_discovery.schema.json`
-- Falls back gracefully if `jsonschema` is not installed
-- Keeps the default validation path dependency-free
+- Bump VERSION to `0.16.0` (minor bump: new schema file, new required field `schema_version` in JSON output)
+- Update CHANGELOG.md with Milestone 19 release notes
+- Keep the existing release workflow
 
-Estimated size: Small (1 file modified: `scripts/validate_bootstrap.py`)
+Estimated size: Minimal (2 files: `VERSION`, `CHANGELOG.md`)

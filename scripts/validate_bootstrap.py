@@ -55,6 +55,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "templates/artifacts/ai/repo_discovery.json.template",
     "schemas/implementation_tracker.schema.json",
     "schemas/repo_discovery.schema.json",
+    "schemas/bootstrap_doctor_report.schema.json",
     "scripts/validate_bootstrap.py",
     "scripts/apply_bootstrap.py",
     "scripts/run_fixture_selftest.py",
@@ -81,6 +82,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
 JSON_FILES_TO_VALIDATE = [
     "schemas/implementation_tracker.schema.json",
     "schemas/repo_discovery.schema.json",
+    "schemas/bootstrap_doctor_report.schema.json",
     "templates/artifacts/ai/repo_discovery.json.template",
 ]
 
