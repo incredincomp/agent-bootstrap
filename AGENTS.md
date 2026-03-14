@@ -191,7 +191,8 @@ Rules:
 ## CI regression gate
 
 `.github/workflows/ci.yml` is the automated regression gate for this repository.
-It runs on every push, pull request, and manual trigger.
+It runs on pull requests, pushes to `main`, and manual dispatch (`workflow_dispatch`).
+Feature-branch pushes do not independently trigger the workflow; they are covered by the `pull_request` event.
 
 Rules:
 - CI is required. Do not bypass or disable it.
