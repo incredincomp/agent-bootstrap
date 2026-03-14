@@ -116,8 +116,15 @@ def audit_repo(target_dir, bootstrap_root):
     """
     Run the doctor audit on a single target repo.
 
+    target_dir may be any existing directory — it does not need to contain
+    a .git/ subdirectory.  Repos without a bootstrap marker are classified
+    as 'unbootstrapped'.  This is in contrast to --root-dir discovery, which
+    only picks up directories that contain .git/.
+
     Returns (result_dict, None) on success, or (None, error_string) on failure.
     result_dict is the full structured dict from bootstrap_doctor.audit().
+    On failure the caller is expected to record the error and continue
+    processing other repos — one failure must not stop the bulk run.
     """
     try:
         target_dir = os.path.abspath(target_dir)
@@ -334,7 +341,11 @@ def parse_args():
         action="append",
         default=[],
         metavar="PATH",
-        help="Path to a target repository to audit. May be repeated.",
+        help=(
+            "Path to a target repository to audit. May be repeated. "
+            "Accepts any existing directory — .git/ is not required. "
+            "Use --root-dir to discover repos automatically."
+        ),
     )
     parser.add_argument(
         "--root-dir",

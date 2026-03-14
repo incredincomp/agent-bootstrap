@@ -7,7 +7,7 @@ Tests cover:
   - aggregate counts by health state
   - JSON output shape
   - handling of unreadable/missing repos
-  - read-only behaviour (no mutations)
+  - read-only behavior (no mutations)
   - schema presence and parseability
 
 Run with:
@@ -300,13 +300,18 @@ class TestBuildJsonReport(unittest.TestCase):
         self.assertEqual(len(report["repos"]), 1)
 
     def test_per_repo_has_required_fields(self):
+        """Per-repo entries must contain all doctor-schema required fields (minus schema_version)."""
+        schema_path = os.path.join(
+            _REPO_ROOT, "schemas", "bootstrap_doctor_report.schema.json"
+        )
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+        doctor_required = set(schema["required"]) - {"schema_version"}
+
         report = ba.build_json_report([self.result], [], "0.15.0")
         repo = report["repos"][0]
-        for field in ("target_dir", "bootstrapped", "health_state",
-                      "marker_status", "marker_era", "required_files_status",
-                      "missing_files", "placeholder_status",
-                      "total_placeholder_count", "recommendations"):
-            self.assertIn(field, repo, f"missing field: {field}")
+        for field in doctor_required:
+            self.assertIn(field, repo, f"per-repo entry missing doctor-required field: {field}")
 
     def test_summary_has_expected_keys(self):
         report = ba.build_json_report([self.result], [], "0.15.0")
@@ -333,29 +338,71 @@ class TestBuildJsonReport(unittest.TestCase):
 class TestRepoResultToJson(unittest.TestCase):
     """_repo_result_to_json() converts audit result to JSON-safe shape."""
 
-    def test_output_has_required_fields(self):
+    @classmethod
+    def _load_doctor_required_fields(cls):
+        """Load required fields from the doctor schema, excluding schema_version."""
+        schema_path = os.path.join(
+            _REPO_ROOT, "schemas", "bootstrap_doctor_report.schema.json"
+        )
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+        return set(schema["required"]) - {"schema_version"}
+
+    def _get_per_repo_output(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             result, _ = ba.audit_repo(tmpdir, _REPO_ROOT)
-        out = ba._repo_result_to_json(result)
-        for field in ("target_dir", "bootstrapped", "health_state",
-                      "marker_status", "marker_era",
-                      "required_files_status", "missing_files",
-                      "placeholder_status", "total_placeholder_count",
-                      "recommendations"):
-            self.assertIn(field, out, f"missing field: {field}")
+        return ba._repo_result_to_json(result)
+
+    def test_all_doctor_required_fields_present(self):
+        """Every doctor-schema required field (except schema_version) must appear."""
+        doctor_required = self._load_doctor_required_fields()
+        out = self._get_per_repo_output()
+        for field in doctor_required:
+            self.assertIn(field, out, f"missing doctor-required field: {field}")
+
+    def test_schema_version_intentionally_absent_per_repo(self):
+        """schema_version lives at the bulk report level, not per-repo."""
+        out = self._get_per_repo_output()
+        self.assertNotIn(
+            "schema_version", out,
+            "schema_version must NOT appear in per-repo entries; "
+            "it belongs at the bulk report top level only.",
+        )
+
+    def test_optional_doctor_fields_included(self):
+        """Optional doctor fields should also be present in per-repo output."""
+        out = self._get_per_repo_output()
+        for field in ("recorded_version", "source_version", "recorded_profile",
+                      "suggested_profile", "profile_confidence", "profile_alignment"):
+            self.assertIn(field, out, f"optional doctor field missing from per-repo: {field}")
 
     def test_recommendations_are_structured(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            result, _ = ba.audit_repo(tmpdir, _REPO_ROOT)
-        out = ba._repo_result_to_json(result)
+        out = self._get_per_repo_output()
         for rec in out["recommendations"]:
             self.assertIn("type", rec)
             self.assertIn("value", rec)
             self.assertIn(rec["type"], ("command", "note"))
 
+    def test_field_alignment_matches_doctor_schema(self):
+        """
+        Bulk per-repo fields must be a superset of doctor schema required fields
+        (minus schema_version).  This test is the anti-drift guard: if the doctor
+        schema adds a new required field, this test will fail, prompting an update
+        to _repo_result_to_json().
+        """
+        doctor_required = self._load_doctor_required_fields()
+        out = self._get_per_repo_output()
+        missing = doctor_required - set(out.keys())
+        self.assertEqual(
+            missing,
+            set(),
+            f"Bulk per-repo output is missing doctor-required fields: {missing}. "
+            "Update _repo_result_to_json() in bulk_audit.py to include them.",
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Read-only behaviour tests
+# Read-only behavior tests
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestReadOnlyBehaviour(unittest.TestCase):
@@ -514,6 +561,83 @@ class TestErrorHandling(unittest.TestCase):
         report = ba.build_json_report([], errors, "0.15.0")
         self.assertEqual(len(report["errors"]), 1)
         self.assertEqual(report["errors"][0]["repo_path"], "/missing/repo")
+
+    def test_mixed_batch_partial_failure(self):
+        """
+        A batch with one good repo and one bad path must produce:
+          - one successful result in repos[]
+          - one error entry in errors[]
+        This proves the audit loop is partial-failure tolerant — one failure
+        does not stop the rest of the batch.
+        """
+        with tempfile.TemporaryDirectory() as good_dir:
+            bad_path = "/nonexistent/repo/path"
+
+            repo_results = []
+            errors = []
+            for path in (good_dir, bad_path):
+                result, err = ba.audit_repo(path, _REPO_ROOT)
+                if err:
+                    errors.append((path, err))
+                else:
+                    repo_results.append(result)
+
+            self.assertEqual(len(repo_results), 1, "good repo must produce a result")
+            self.assertEqual(len(errors), 1, "bad path must produce exactly one error")
+            self.assertIn("not a directory", errors[0][1])
+            self.assertEqual(repo_results[0]["health_state"], "unbootstrapped")
+
+    def test_all_repos_fail_still_produces_report(self):
+        """
+        When every repo in the batch fails, build_json_report still produces
+        a valid (empty-repos) report.  No exception must be raised.
+        """
+        errors = [
+            ("/nonexistent/a", "not a directory"),
+            ("/nonexistent/b", "not a directory"),
+        ]
+        report = ba.build_json_report([], errors, "0.15.0")
+        self.assertEqual(report["repo_count"], 2)
+        self.assertEqual(report["repos"], [])
+        self.assertEqual(len(report["errors"]), 2)
+        # Summary over zero results must not raise
+        self.assertIn("by_health_state", report["summary"])
+
+    def test_repo_flag_accepts_non_git_directory(self):
+        """
+        --repo accepts any existing directory, regardless of whether it
+        contains .git/.  This is different from --root-dir, which skips
+        directories without .git/.  A non-git dir is audited and classified
+        as 'unbootstrapped' (no bootstrap marker).
+        """
+        with tempfile.TemporaryDirectory() as non_git_dir:
+            # Confirm no .git/ exists
+            self.assertFalse(os.path.isdir(os.path.join(non_git_dir, ".git")))
+            result, err = ba.audit_repo(non_git_dir, _REPO_ROOT)
+            self.assertIsNone(err, "non-git dir must not produce an error")
+            self.assertIsNotNone(result)
+            self.assertEqual(
+                result["health_state"],
+                "unbootstrapped",
+                "--repo with a non-git dir must return unbootstrapped, not an error",
+            )
+
+    def test_root_dir_skips_non_git_directories(self):
+        """
+        --root-dir skips directories that do not contain .git/.
+        This is the conservative behavior documented in the module docstring
+        and --root-dir help text.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a plain dir (no .git/)
+            plain_dir = os.path.join(tmpdir, "plain-dir")
+            os.makedirs(plain_dir)
+            # Create a git repo
+            git_repo = _make_git_repo(tmpdir, "git-repo")
+
+            found = ba.discover_repos(tmpdir, max_depth=1)
+            self.assertIn(git_repo, found)
+            self.assertNotIn(plain_dir, found)
 
 
 if __name__ == "__main__":
