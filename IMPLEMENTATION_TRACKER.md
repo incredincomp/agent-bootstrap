@@ -442,6 +442,52 @@ In `scripts/bootstrap_status.py`:
 
 ---
 
+## Milestone 15 — Profile Suggestion / Repo Classification Report Mode
+
+**Objective:** Add a read-only profile suggestion tool that inspects a target repository
+and recommends the most likely bootstrap profile based on file-system evidence.
+
+**Script chosen:** New script `scripts/suggest_profile.py` (preferred over extending
+`bootstrap_status.py` — keeps concerns separated and the suggestion logic self-contained).
+
+**Heuristic design:**
+- Each profile has an explicit list of named signals with `check(target_dir) -> bool` callables.
+- Signals have weights (1 or 2) based on how strongly they indicate a profile.
+- Score is sum of matched weights; confidence is `high` (≥65%), `medium` (≥35%), `low`.
+- If top score is 0, falls back to `generic` with low confidence.
+- No ML, no opaque scoring — all logic is readable in `PROFILES` dict.
+
+**Files created:**
+- `scripts/suggest_profile.py` — the new read-only suggestion tool
+
+**Files updated:**
+- `scripts/run_fixture_selftest.py` — added State E (profile suggestion proof for each fixture)
+- `scripts/validate_bootstrap.py` — added `suggest_profile.py` to required files
+- `scripts/bootstrap_status.py` — added `suggest_profile.py` to CORE_SCRIPTS list
+- `bootstrap-manifest.yaml` — added `suggest_profile.py` to `bootstrap_repo_required_files`
+- `README.md` — added "Profile suggestion" section
+- `AGENTS.md` — added "Profile suggestion — advisory-only rules" section
+
+**Validation performed:**
+- `python scripts/validate_bootstrap.py` → 38 files present, 43 checks passed
+- `python scripts/run_fixture_selftest.py` → B:PASS C:PASS D:PASS E:PASS for both fixtures
+  - minimal-python-service → suggested `python-service` (high confidence) ✓
+  - minimal-infra-repo → suggested `infra-repo` (medium confidence) ✓
+- `python scripts/suggest_profile.py --target-dir <dir> --verbose` → correct output
+- `python scripts/suggest_profile.py --target-dir <dir> --json` → valid JSON output
+- `python scripts/suggest_profile.py --target-dir /nonexistent` → exits 1 with clear error
+
+**Known limitations (Milestone 15):**
+- `infra-repo` achieves medium (not high) confidence on the minimal-infra-repo fixture
+  because the fixture lacks `.tf` files (the strongest infra signal). This is honest —
+  the fixture is minimal by design.
+- No fixtures for `vscode-extension` or `kubernetes-platform` exist yet; suggestion
+  correctness for those profiles is unproven by fixture (out of scope for this milestone).
+- Suggestion is based entirely on file-system structure; no content parsing beyond
+  simple `str.lower() in content` substring checks.
+
+---
+
 ## Open improvements (future milestones)
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
@@ -453,6 +499,7 @@ In `scripts/bootstrap_status.py`:
 - [x] Add manifest-driven bootstrap profiles ✅ Done (Milestone 12)
 - [x] Add versioned bootstrap releases and compatibility/upgrade policy ✅ Done (Milestone 13)
 - [x] Add release discipline and bootstrap status/report mode ✅ Done (Milestone 14)
+- [x] Add profile suggestion / repo classification report mode ✅ Done (Milestone 15)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [x] Add a `CHANGELOG.md` when this repo has meaningful version history ✅ Done (Milestone 13)
@@ -472,7 +519,7 @@ See "Known limitations" above under the Milestone 14 entry.
 
 ## Next strongest bounded milestone
 
-**Milestone 15 — jsonschema strict validation (optional `--strict` flag)**
+**Milestone 16 — jsonschema strict validation (optional `--strict` flag)**
 
 Scope:
 - Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)

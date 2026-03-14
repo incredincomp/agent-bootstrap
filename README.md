@@ -538,6 +538,82 @@ that failed to identify which check broke.
 
 ---
 
+## Profile suggestion — choosing the right profile
+
+Before applying a bootstrap scaffold, you can inspect a target repository and get a
+suggested profile based on its file-system evidence.
+
+### What profile suggestion does
+
+`scripts/suggest_profile.py` scans the target directory for well-known signal files
+and directories (e.g., `pyproject.toml`, `*.tf`, `Chart.yaml`) and reports:
+
+- The most likely bootstrap profile.
+- A confidence level (`high`, `medium`, or `low`).
+- The specific signals that matched.
+- Any alternative candidate profiles.
+- The recommended `apply_bootstrap.py` command to run next.
+
+**The tool is read-only.** It never creates, modifies, or deletes any files.
+
+### What profile suggestion does NOT do
+
+- It does **not** apply the suggested profile automatically.
+- It does **not** replace the maintainer's judgment.
+- It does **not** guarantee the suggestion is correct — it is advisory only.
+- It does **not** run discovery or populate `{{PLACEHOLDER}}` markers.
+
+### Supported profiles
+
+| Profile | Key signals |
+|---------|------------|
+| `python-service` | `pyproject.toml`, `requirements.txt`, `src/`, `tests/`, `.py` files |
+| `infra-repo` | `*.tf` files, `environments/`, `modules/`, `inventory/`, no app runtime |
+| `vscode-extension` | `package.json` with vscode content, `extension.ts`, `.vscodeignore` |
+| `kubernetes-platform` | `Chart.yaml`, `values.yaml`, `kustomization.yaml`, `manifests/`, `clusters/` |
+| `generic` | Fallback — weak, mixed, or absent evidence |
+
+### Example commands
+
+```bash
+# Basic suggestion (human-readable output):
+python scripts/suggest_profile.py --target-dir /path/to/repo
+
+# Verbose output (shows alternative candidates and all scores):
+python scripts/suggest_profile.py --target-dir /path/to/repo --verbose
+
+# JSON output (useful for scripting):
+python scripts/suggest_profile.py --target-dir /path/to/repo --json
+```
+
+### How to use suggestion output before apply
+
+1. Run the suggestion tool against the target repo.
+2. Review the evidence and confidence level.
+3. If the suggestion looks right, use the recommended command shown in the output.
+4. If uncertain, review the signals and choose manually.
+5. The final profile choice is always yours.
+
+```bash
+# Step 1: inspect
+python scripts/suggest_profile.py --target-dir /path/to/repo
+
+# Step 2: apply with the suggested (or chosen) profile
+python scripts/apply_bootstrap.py --target-dir /path/to/repo --dry-run --profile python-service
+
+# Step 3: apply for real once dry-run looks right
+python scripts/apply_bootstrap.py --target-dir /path/to/repo --profile python-service
+```
+
+### Why the final choice belongs to the maintainer
+
+Profile selection determines which template variant is staged into the target repo.
+The suggestion tool uses simple file-system heuristics — it cannot know team conventions,
+architectural intent, or edge cases that an experienced maintainer would recognize.
+Treat the suggestion as a fast starting point, not an authoritative decision.
+
+---
+
 ## Bootstrap status and release workflow
 
 ### Checking bootstrap repo status

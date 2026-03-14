@@ -30,6 +30,7 @@ CORE_SCRIPTS = [
     "scripts/refresh_bootstrap.py",
     "scripts/run_fixture_selftest.py",
     "scripts/bootstrap_status.py",
+    "scripts/suggest_profile.py",
 ]
 
 CORE_DOCS = [

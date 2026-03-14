@@ -12,6 +12,27 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added (Milestone 15)
+- `scripts/suggest_profile.py` — read-only profile suggestion tool. Inspects a
+  target repository and suggests the most likely bootstrap profile using explicit
+  file-system signals. Reports confidence (`high`/`medium`/`low`), matched signals,
+  alternative candidates, and the recommended `apply_bootstrap.py` command. Supports
+  `--verbose` (shows all profile scores and alternative signal detail) and `--json`
+  (machine-readable output). Exits 0 on successful suggestion; exits 1 only on
+  true errors (missing target dir, unreadable path).
+
+### Changed (Milestone 15)
+- `scripts/run_fixture_selftest.py`: added State E (profile suggestion proof); both
+  fixtures now prove their expected profile suggestion. Summary now shows E label.
+  Mode line updated to reflect State E.
+- `scripts/validate_bootstrap.py`: added `scripts/suggest_profile.py` to
+  `BOOTSTRAP_REPO_REQUIRED_FILES` (38 required files, 43 total checks).
+- `scripts/bootstrap_status.py`: added `scripts/suggest_profile.py` to `CORE_SCRIPTS`.
+- `bootstrap-manifest.yaml`: added `scripts/suggest_profile.py` to
+  `bootstrap_repo_required_files`.
+- `README.md`: added `## Profile suggestion — choosing the right profile` section.
+- `AGENTS.md`: added `## Profile suggestion — advisory-only rules` section.
+
 ### Added (Milestone 14)
 - `scripts/bootstrap_status.py` — status/report tool for the bootstrap source
   repo and bootstrapped target repos. Reports version, revision, CHANGELOG state,
