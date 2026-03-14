@@ -12,6 +12,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added (Milestone 14)
+- `scripts/bootstrap_status.py` — status/report tool for the bootstrap source
+  repo and bootstrapped target repos. Reports version, revision, CHANGELOG state,
+  core docs/scripts, supported profiles, and version/changelog coherence.
+- `docs/BOOTSTRAP_RELEASE_WORKFLOW.md` — concise repeatable release checklist
+  covering patch/minor/major decisions, required local checks, CI expectations,
+  changelog conventions, and post-merge verification.
+- Changelog coherence check (`check_changelog_coherence()`) in
+  `scripts/validate_bootstrap.py`: verifies that `CHANGELOG.md` represents the
+  current version as a release heading or has an `[Unreleased]` section.
+
+### Changed (Milestone 14)
+- `scripts/validate_bootstrap.py`: `check_version_file()` now returns the version
+  string so the coherence check can use it; changelog coherence added as Check 4
+  in source repo validation (42 total checks); new required files added to
+  `BOOTSTRAP_REPO_REQUIRED_FILES`.
+- `bootstrap-manifest.yaml`: added `docs/BOOTSTRAP_RELEASE_WORKFLOW.md` and
+  `scripts/bootstrap_status.py` to `bootstrap_repo_required_files`.
+- `.github/workflows/ci.yml`: added `scripts/bootstrap_status.py` to the
+  `py_compile` syntax-check step.
+- `README.md`: added `## Bootstrap status and release workflow` section.
+- `AGENTS.md`: added `## Release discipline` section with release contract rules.
+
 ---
 
 ## [0.13.0] — 2026-03-14

@@ -40,6 +40,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "VERSION",
     "bootstrap-manifest.yaml",
     "docs/BOOTSTRAP_VERSIONING.md",
+    "docs/BOOTSTRAP_RELEASE_WORKFLOW.md",
     "prompts/new-repo-bootstrap.md",
     "prompts/existing-repo-discovery.md",
     "prompts/resume-work.md",
@@ -58,6 +59,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "scripts/apply_bootstrap.py",
     "scripts/run_fixture_selftest.py",
     "scripts/refresh_bootstrap.py",
+    "scripts/bootstrap_status.py",
     "fixtures/targets/minimal-python-service/README.md",
     "fixtures/targets/minimal-python-service/conftest.py",
     "fixtures/targets/minimal-infra-repo/README.md",
@@ -243,23 +245,79 @@ def check_placeholders(repo_dir, file_list, verbose):
 
 def check_version_file(repo_dir, verbose):
     """Check that the VERSION file exists and contains a parseable semver string.
-    Returns (pass_count, fail_count, failures)."""
+    Returns (pass_count, fail_count, failures) and the version string."""
     version_path = os.path.join(repo_dir, "VERSION")
     if not os.path.isfile(version_path):
         # Missing file is already caught by check_required_files; skip here
-        return 0, 0, []
+        return 0, 0, [], None
     try:
         with open(version_path, "r", encoding="utf-8") as f:
             version = f.read().strip()
     except OSError as exc:
         print(f"  [FAIL] Could not read VERSION: {exc}")
-        return 0, 1, [("VERSION", str(exc))]
+        return 0, 1, [("VERSION", str(exc))], None
     if not re.match(r"^\d+\.\d+\.\d+", version):
         print(f"  [FAIL] VERSION does not look like a semver string: {repr(version)}")
-        return 0, 1, [("VERSION", f"not a semver: {version!r}")]
+        return 0, 1, [("VERSION", f"not a semver: {version!r}")], version
     if verbose:
         print(f"  [PASS] VERSION: {version}")
-    return 1, 0, []
+    return 1, 0, [], version
+
+
+def check_changelog_coherence(repo_dir, version, verbose):
+    """Check that CHANGELOG.md exists and represents the current version coherently.
+
+    Coherence rules:
+    - CHANGELOG.md must exist (caught by required-file check, but re-verified here).
+    - The current version must appear as a release heading (## [X.Y.Z]) OR
+      there must be an [Unreleased] section (version in progress).
+
+    Returns (pass_count, fail_count, failures).
+    """
+    changelog_path = os.path.join(repo_dir, "CHANGELOG.md")
+    if not os.path.isfile(changelog_path):
+        # Missing file caught by required-file check; skip here
+        return 0, 0, []
+
+    if version is None:
+        # Cannot check coherence without a readable version
+        return 0, 0, []
+
+    changelog_version_re = re.compile(r"^##\s+\[(\d+\.\d+\.\d+)\]")
+    changelog_unreleased_re = re.compile(r"^##\s+\[Unreleased\]", re.IGNORECASE)
+
+    has_unreleased = False
+    found_versions = []
+    try:
+        with open(changelog_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if changelog_unreleased_re.match(line):
+                    has_unreleased = True
+                m = changelog_version_re.match(line)
+                if m:
+                    found_versions.append(m.group(1))
+    except OSError as exc:
+        print(f"  [FAIL] Could not read CHANGELOG.md: {exc}")
+        return 0, 1, [("CHANGELOG.md", str(exc))]
+
+    if version in found_versions:
+        if verbose:
+            print(f"  [PASS] CHANGELOG.md contains entry for version {version}")
+        return 1, 0, []
+
+    if has_unreleased:
+        if verbose:
+            print(
+                f"  [PASS] CHANGELOG.md has [Unreleased] section "
+                f"(version {version} in progress)"
+            )
+        return 1, 0, []
+
+    msg = (
+        f"version {version} not found in CHANGELOG.md and no [Unreleased] section present"
+    )
+    print(f"  [FAIL] {msg}")
+    return 0, 1, [("CHANGELOG.md", msg)]
 
 
 def main():
@@ -353,13 +411,26 @@ def main():
 
     # ── Check 3: VERSION file readability ─────────────────────────────────
     print("=== Version file check ===")
-    p, f, _ = check_version_file(repo_dir, args.verbose)
+    p, f, _, version = check_version_file(repo_dir, args.verbose)
     total_pass += p
     total_fail += f
     if f == 0 and p > 0:
         print(f"  VERSION file is present and parseable.")
     elif f > 0:
         print(f"  VERSION file check failed.")
+    print()
+
+    # ── Check 4: CHANGELOG coherence ──────────────────────────────────────
+    print("=== Changelog coherence check ===")
+    p, f, _ = check_changelog_coherence(repo_dir, version, args.verbose)
+    total_pass += p
+    total_fail += f
+    if f == 0 and p > 0:
+        print(f"  CHANGELOG.md coherence check passed.")
+    elif f > 0:
+        print(f"  CHANGELOG.md coherence check failed.")
+    elif p == 0 and f == 0:
+        print(f"  CHANGELOG.md coherence check skipped (VERSION unreadable).")
     print()
 
     # ── Summary ───────────────────────────────────────────────────────────

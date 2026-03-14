@@ -300,6 +300,26 @@ Rules:
 
 ---
 
+## Release discipline
+
+Release discipline is part of the operating contract for this repository.
+
+Rules:
+- Before merging any release-oriented change, run the full local pre-release
+  checklist in `docs/BOOTSTRAP_RELEASE_WORKFLOW.md`.
+- `scripts/bootstrap_status.py` is the fast operator check for source and target
+  repo state. Run it when inspecting bootstrap state. Keep it lean and human-readable.
+- Status/report tooling must remain dependency-free (standard library only) and
+  produce plain human-readable output. Do not add JSON export, dashboards, or
+  external integrations.
+- Future CI or release enhancements must preserve simplicity. Do not add release
+  automation, tag-pushing, or publish steps to CI without an explicit decision.
+- When adding new required files, update both `BOOTSTRAP_REPO_REQUIRED_FILES` in
+  `validate_bootstrap.py` and `bootstrap_repo_required_files` in
+  `bootstrap-manifest.yaml` together. The CI gate will catch drift.
+
+---
+
 ## How to handle uncertainty
 
 When uncertain about intent:

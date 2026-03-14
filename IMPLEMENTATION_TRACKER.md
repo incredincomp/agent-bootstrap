@@ -373,6 +373,75 @@ when is refresh safe.
 
 ---
 
+## Milestone 14 — Release Discipline and Bootstrap Status / Report Mode
+
+**Date:** 2026-03-14  
+**Status:** Complete
+
+### Objective
+
+Add a small operational layer for inspecting bootstrap repo release state,
+inspecting target repo bootstrap markers, validating version/changelog coherence,
+and following a repeatable release checklist.
+
+### Files created
+
+- `scripts/bootstrap_status.py` — new status/report script (source repo and target
+  repo modes, version/changelog coherence check, profile list)
+- `docs/BOOTSTRAP_RELEASE_WORKFLOW.md` — concise release checklist and workflow doc
+
+### Files updated
+
+- `scripts/validate_bootstrap.py` — added `check_changelog_coherence()` and
+  `check_version_file()` now returns the version string; changelog coherence
+  check added as Check 4 in source repo validation; added new required files
+  (`docs/BOOTSTRAP_RELEASE_WORKFLOW.md`, `scripts/bootstrap_status.py`)
+- `bootstrap-manifest.yaml` — added `docs/BOOTSTRAP_RELEASE_WORKFLOW.md` and
+  `scripts/bootstrap_status.py` to `bootstrap_repo_required_files`
+- `.github/workflows/ci.yml` — added `scripts/bootstrap_status.py` to py_compile step
+- `README.md` — added `## Bootstrap status and release workflow` section
+- `AGENTS.md` — added `## Release discipline` section
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 14 recorded
+
+### Status/report design chosen
+
+Single script `scripts/bootstrap_status.py` with two modes:
+1. **Source repo mode** (default): reports version, git revision, CHANGELOG,
+   core docs, core scripts, profiles, and version/changelog coherence.
+2. **Target repo mode** (`--target-dir`): parses `bootstrap/BOOTSTRAP_SOURCE.md`
+   and reports all marker fields, era classification, and profile.
+
+### Coherence checks added
+
+In `scripts/validate_bootstrap.py`:
+- `check_changelog_coherence()`: verifies that the current version from `VERSION`
+  appears as a release heading in `CHANGELOG.md`, OR that an `[Unreleased]` section
+  exists. Fails only on clear incoherence.
+
+In `scripts/bootstrap_status.py`:
+- Same coherence logic in human-readable form, surfaced in source repo status output.
+
+### Validation performed
+
+- `python scripts/validate_bootstrap.py` → PASSED (42 checks, up from 39)
+- `python scripts/run_fixture_selftest.py` → PASSED (B:PASS C:PASS D:PASS for both fixtures)
+- `python scripts/bootstrap_status.py` → source repo status reported correctly
+- `python scripts/bootstrap_status.py --target-dir /tmp/test_target` → marker parsed
+  and reported correctly for a populated marker
+- `python scripts/bootstrap_status.py --target-dir /tmp/missing` → missing marker
+  reported clearly without crashing
+
+### Known limitations (Milestone 14)
+
+- `bootstrap_status.py` reads profiles via a simple line scan of the manifest YAML;
+  does not use a YAML parser (by design, to stay dependency-free). Works reliably for
+  the current manifest structure.
+- No JSON export or machine-readable output from `bootstrap_status.py` — intentional;
+  kept human-readable per milestone scope.
+- No automated git tagging or GitHub Releases integration — out of scope.
+
+---
+
 ## Open improvements (future milestones)
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
@@ -383,6 +452,7 @@ when is refresh safe.
 - [x] Add a safe refresh/upgrade path for already-bootstrapped target repos ✅ Done (Milestone 11)
 - [x] Add manifest-driven bootstrap profiles ✅ Done (Milestone 12)
 - [x] Add versioned bootstrap releases and compatibility/upgrade policy ✅ Done (Milestone 13)
+- [x] Add release discipline and bootstrap status/report mode ✅ Done (Milestone 14)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
 - [x] Add a `CHANGELOG.md` when this repo has meaningful version history ✅ Done (Milestone 13)
@@ -394,15 +464,15 @@ when is refresh safe.
 
 ---
 
-## Known limitations (Milestone 13)
+## Known limitations (Milestone 14)
 
-See "Known limitations" above under the Milestone 13 entry.
+See "Known limitations" above under the Milestone 14 entry.
 
 ---
 
 ## Next strongest bounded milestone
 
-**Milestone 14 — jsonschema strict validation (optional `--strict` flag)**
+**Milestone 15 — jsonschema strict validation (optional `--strict` flag)**
 
 Scope:
 - Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)

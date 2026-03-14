@@ -538,6 +538,51 @@ that failed to identify which check broke.
 
 ---
 
+## Bootstrap status and release workflow
+
+### Checking bootstrap repo status
+
+```bash
+python scripts/bootstrap_status.py
+```
+
+Reports: version, git revision, CHANGELOG presence, core docs and scripts,
+supported profiles, and version/changelog coherence.
+
+### Inspecting a target repo marker
+
+```bash
+python scripts/bootstrap_status.py --target-dir /path/to/target-repo
+```
+
+Reports: bootstrap source, version, revision, date, agent, prompt, profile,
+and era classification (pre-version, pre-profile, or versioned).
+
+### Version/changelog coherence check
+
+The coherence check (run automatically by `validate_bootstrap.py` and
+`bootstrap_status.py`) confirms:
+- `VERSION` exists and contains a valid semver string.
+- `CHANGELOG.md` exists.
+- The current version appears in `CHANGELOG.md` as a release heading, OR
+  an `[Unreleased]` section is present (version in progress).
+
+```bash
+python scripts/validate_bootstrap.py  # includes coherence check
+python scripts/bootstrap_status.py    # human-readable summary
+```
+
+### Release workflow
+
+See [`docs/BOOTSTRAP_RELEASE_WORKFLOW.md`](docs/BOOTSTRAP_RELEASE_WORKFLOW.md)
+for the full step-by-step release checklist, including:
+- When to use patch/minor/major bumps.
+- What files to update.
+- What local checks to run before merge.
+- How to tag a release.
+
+---
+
 ## Bootstrap versioning
 
 ### Version source of truth
