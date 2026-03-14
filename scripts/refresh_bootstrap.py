@@ -157,6 +157,26 @@ MARKER_PLACEHOLDERS = {
 }
 
 
+def read_bootstrap_version(bootstrap_root):
+    """Read the bootstrap version from the VERSION file. Returns the version string or 'unknown'."""
+    version_path = os.path.join(bootstrap_root, "VERSION")
+    try:
+        with open(version_path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return "unknown"
+
+
+def parse_major_version(version_str):
+    """Extract the major version integer from a semver string, or None if not parseable."""
+    if not version_str:
+        return None
+    match = re.match(r"^(\d+)\.", version_str)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
@@ -188,8 +208,8 @@ def parse_args():
         "--bootstrap-version",
         default=None,
         help=(
-            "Bootstrap source version (git SHA, tag, or label) to record in the "
-            "marker when it is refreshed. Defaults to the git HEAD SHA."
+            "Bootstrap source version to record in the marker when it is refreshed. "
+            "Defaults to the version in the VERSION file."
         ),
     )
     return parser.parse_args()
@@ -217,12 +237,13 @@ def get_git_sha(repo_dir):
     return "unknown"
 
 
-def render_marker(content, bootstrap_version, refresh_date, profile):
+def render_marker(content, bootstrap_version, bootstrap_revision, refresh_date, profile):
     """Replace bootstrap-system placeholders in the marker template."""
     result = content
     for placeholder, value in MARKER_PLACEHOLDERS.items():
         result = result.replace(placeholder, value)
     result = result.replace("{{BOOTSTRAP_SOURCE_VERSION}}", bootstrap_version)
+    result = result.replace("{{BOOTSTRAP_SOURCE_REVISION}}", bootstrap_revision)
     result = result.replace("{{BOOTSTRAP_DATE}}", refresh_date)
     result = result.replace("{{BOOTSTRAP_PROFILE}}", profile)
     return result
@@ -359,13 +380,15 @@ def main():
         print(f"ERROR: Target directory does not exist: {target_dir}", file=sys.stderr)
         sys.exit(1)
 
-    bootstrap_version = args.bootstrap_version or get_git_sha(bootstrap_root)
+    bootstrap_version = args.bootstrap_version or read_bootstrap_version(bootstrap_root)
+    bootstrap_revision = get_git_sha(bootstrap_root)
     refresh_date = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
 
     mode_label = "[DRY RUN] " if args.dry_run else ""
     print(f"{mode_label}Bootstrap refresh")
     print(f"  Bootstrap source  : {bootstrap_root}")
     print(f"  Bootstrap version : {bootstrap_version}")
+    print(f"  Bootstrap revision: {bootstrap_revision}")
     print(f"  Target directory  : {target_dir}")
     print(f"  Force mode        : {'yes (will overwrite populated files)' if args.force else 'no (safe defaults)'}")
     print()
@@ -386,6 +409,25 @@ def main():
             f"target may not have been bootstrapped yet (consider apply_bootstrap.py)"
         )
     print()
+
+    # ── Major-version drift warning ──────────────────────────────────────────
+    prior_version = state.get("bootstrap_version")
+    if prior_version:
+        current_major = parse_major_version(bootstrap_version)
+        prior_major = parse_major_version(prior_version)
+        if current_major is not None and prior_major is not None and current_major != prior_major:
+            print(
+                f"  [WARN] Major-version drift detected: "
+                f"target was bootstrapped from v{prior_version}, "
+                f"current bootstrap is v{bootstrap_version}."
+            )
+            print(
+                "  [WARN] Major version changes may require manual review before applying."
+            )
+            print(
+                "  [WARN] Consider running with --dry-run first and reviewing the planned changes."
+            )
+            print()
 
     # Resolve profile from marker; fall back to generic if not recorded
     current_profile = state.get("bootstrap_profile") or DEFAULT_PROFILE
@@ -437,7 +479,7 @@ def main():
         compare_content = template_content
         write_content = template_content
         if policy == "marker":
-            compare_content = render_marker(template_content, bootstrap_version, refresh_date, current_profile)
+            compare_content = render_marker(template_content, bootstrap_version, bootstrap_revision, refresh_date, current_profile)
             write_content = compare_content
 
         classification = classify_file(compare_content, dest_path, policy)

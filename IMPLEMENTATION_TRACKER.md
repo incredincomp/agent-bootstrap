@@ -306,6 +306,73 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
+## Milestone 13 — Versioned Bootstrap Releases and Compatibility / Upgrade Policy
+
+### Objective
+Establish a minimal, durable versioning and compatibility model so maintainers and
+target repositories can reliably answer: what version is this, what changed, and
+when is refresh safe.
+
+### Versioning design chosen
+- **Single source of truth**: `VERSION` file at repo root containing a semver string.
+  Chosen over a manifest field because it is simpler to read, human-readable, and
+  easy to bump without YAML parsing knowledge.
+- **Marker fields**: `Bootstrap source version` records the semver version;
+  `Bootstrap source revision` records the git SHA as supplemental traceability.
+- **Major-version drift warning**: `refresh_bootstrap.py` warns when the target's
+  recorded major version differs from the current bootstrap major version.
+
+### Marker/compatibility decisions
+- `BOOTSTRAP_SOURCE_VERSION` now records the semver version (changed from git SHA).
+- `BOOTSTRAP_SOURCE_REVISION` is a new auto-filled field for the git SHA.
+- Pre-version markers (git SHA in version field) are treated as pre-0.13.0.
+- All changes are backward-compatible: refresh still classifies markers correctly.
+
+### Files created in Milestone 13
+
+#### Root
+- `VERSION` — new; single source of truth for bootstrap version (`0.13.0`)
+- `CHANGELOG.md` — new; first formalized changelog with 0.13.0 entry and pre-release history
+
+#### docs/
+- `docs/BOOTSTRAP_VERSIONING.md` — new; compatibility/upgrade policy document
+
+#### scripts/ (modified)
+- `scripts/apply_bootstrap.py` — added `read_bootstrap_version()`; changed version source
+  from git SHA to VERSION file; added `bootstrap_revision` (git SHA) to ctx; updated
+  `render_marker()` to fill `{{BOOTSTRAP_SOURCE_REVISION}}`; updated output labels
+- `scripts/refresh_bootstrap.py` — added `read_bootstrap_version()` and
+  `parse_major_version()`; changed version source to VERSION file; added `bootstrap_revision`;
+  updated `render_marker()` to fill `{{BOOTSTRAP_SOURCE_REVISION}}`; added major-version
+  drift warning in `main()`; updated `--bootstrap-version` help text
+- `scripts/validate_bootstrap.py` — added `VERSION`, `CHANGELOG.md`,
+  `docs/BOOTSTRAP_VERSIONING.md` to `BOOTSTRAP_REPO_REQUIRED_FILES`; added
+  `check_version_file()` function; added version check call in bootstrap source validation
+
+#### templates/
+- `templates/bootstrap/BOOTSTRAP_SOURCE.md.template` — added `Bootstrap source revision`
+  row; updated comment block for new field semantics
+
+#### Root (modified)
+- `AGENTS.md` — added `## Version discipline` section with version bump rules
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 13 recorded
+- `bootstrap-manifest.yaml` — removed `bootstrap_version` field (replaced with a comment pointing to VERSION as the authoritative source); added new required files
+- `README.md` — added `## Bootstrap versioning` section
+
+### Validation performed
+- `python scripts/validate_bootstrap.py` → PASSED (39 checks)
+- `python scripts/run_fixture_selftest.py` → PASSED (B:PASS C:PASS D:PASS for both fixtures)
+- Manual verification: `apply_bootstrap.py` marker shows correct semver version and git SHA
+- Manual verification: `refresh_bootstrap.py` shows prior/current version comparison
+- Manual verification: major-version drift warning triggered correctly
+
+### Known limitations (Milestone 13)
+- No automated git tagging or GitHub Releases integration — intentionally out of scope.
+- The PROFILES dict in `apply_bootstrap.py` and `refresh_bootstrap.py` remains duplicated
+  (not related to versioning; deferred from Milestone 12).
+
+---
+
 ## Open improvements (future milestones)
 
 - [x] Add `--target-dir` mode to `validate_bootstrap.py` to validate a bootstrapped target repo ✅ Done (Milestone 7)
@@ -315,33 +382,27 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 - [x] Add a GitHub Actions workflow to run `validate_bootstrap.py` and `run_fixture_selftest.py` on push ✅ Done (Milestone 10)
 - [x] Add a safe refresh/upgrade path for already-bootstrapped target repos ✅ Done (Milestone 11)
 - [x] Add manifest-driven bootstrap profiles ✅ Done (Milestone 12)
+- [x] Add versioned bootstrap releases and compatibility/upgrade policy ✅ Done (Milestone 13)
 - [ ] Expand examples with concrete file trees and discovery findings
 - [ ] Add a `prompts/target-repo-audit.md` for ongoing maintenance sessions
-- [ ] Consider adding a `CHANGELOG.md` when this repo has meaningful version history
+- [x] Add a `CHANGELOG.md` when this repo has meaningful version history ✅ Done (Milestone 13)
 - [ ] Add CODEOWNERS or similar if this becomes a shared team resource
 - [ ] Make `apply_bootstrap.py` and `refresh_bootstrap.py` fully read template mappings
   from `bootstrap-manifest.yaml` rather than the static fallback list (currently in sync;
   unifying reduces future drift)
 - [ ] Add profile-specific fixture proof data for vscode-extension and kubernetes-platform
-  (currently proven indirectly through apply dry-run; dedicated fixtures deferred)
 
 ---
 
-## Known limitations (Milestone 12)
+## Known limitations (Milestone 13)
 
-- Profile selection is explicit only — there is no auto-detection or suggestion mode.
-- `vscode-extension` and `kubernetes-platform` profiles have templates but no dedicated
-  fixture proof fixtures. They are proven through syntax checks and manual dry-run
-  verification. A future milestone could add dedicated fixtures for these profiles.
-- The PROFILES dict in `apply_bootstrap.py` and `refresh_bootstrap.py` is a copy of the
-  same data. A future cleanup could unify these by reading from `bootstrap-manifest.yaml`
-  at runtime (deferred: consistent with existing static-list pattern).
+See "Known limitations" above under the Milestone 13 entry.
 
 ---
 
 ## Next strongest bounded milestone
 
-**Milestone 13 — jsonschema strict validation (optional `--strict` flag)**
+**Milestone 14 — jsonschema strict validation (optional `--strict` flag)**
 
 Scope:
 - Add a `--strict` flag to `validate_bootstrap.py` that uses `jsonschema` (if installed)

@@ -16,13 +16,15 @@ This file records where and when this repository was bootstrapped.
 |-------|-------|
 | Bootstrap source repository | {{BOOTSTRAP_SOURCE_REPO}} |
 | Bootstrap source version | {{BOOTSTRAP_SOURCE_VERSION}} |
+| Bootstrap source revision | {{BOOTSTRAP_SOURCE_REVISION}} |
 | Bootstrap date | {{BOOTSTRAP_DATE}} |
 | Agent / operator | {{BOOTSTRAP_AGENT}} |
 | Prompt used | {{BOOTSTRAP_PROMPT_USED}} |
 | Bootstrap profile | {{BOOTSTRAP_PROFILE}} |
 
 <!-- BOOTSTRAP_SOURCE_REPO: URL or path to the agent-bootstrap repository used.
-     BOOTSTRAP_SOURCE_VERSION: Git commit SHA or tag of the bootstrap source.
+     BOOTSTRAP_SOURCE_VERSION: Semantic version of the bootstrap source (e.g., 0.13.0).
+     BOOTSTRAP_SOURCE_REVISION: Git commit SHA of the bootstrap source at apply/refresh time.
      BOOTSTRAP_DATE: ISO 8601 date (e.g., 2024-01-15).
      BOOTSTRAP_AGENT: Name/version of the AI agent, or "Human" if manual.
      BOOTSTRAP_PROMPT_USED: Which prompt file was used (e.g., prompts/new-repo-bootstrap.md).

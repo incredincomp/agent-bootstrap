@@ -538,6 +538,51 @@ that failed to identify which check broke.
 
 ---
 
+## Bootstrap versioning
+
+### Version source of truth
+
+The bootstrap version is defined in the `VERSION` file at the root of this repository.
+It contains a single semantic version string (e.g., `0.13.0`).
+
+```bash
+cat VERSION
+# 0.13.0
+```
+
+`apply_bootstrap.py` and `refresh_bootstrap.py` read this file at run time to record
+the bootstrap version in the target repo's marker.
+
+### What the marker records
+
+When `apply_bootstrap.py` runs, it writes two version fields into `bootstrap/BOOTSTRAP_SOURCE.md`:
+
+| Field | Value | Example |
+|-------|-------|---------|
+| Bootstrap source version | semver from `VERSION` file | `0.13.0` |
+| Bootstrap source revision | git SHA of the bootstrap repo | `abc1234` |
+
+The `refresh_bootstrap.py` script reads the prior version from the marker, shows it
+alongside the current version, and emits a warning if the major version has changed.
+
+### Patch / minor / major semantics
+
+| Change type | Example | Refresh safety |
+|-------------|---------|---------------|
+| Patch | Doc corrections, script bug fixes | Safe — no manual review expected |
+| Minor | New templates, new profiles, additive marker fields | Bounded review — new files created; existing populated files skipped |
+| Major | Marker field renames, structural policy changes | Manual review required — run `--dry-run` first |
+
+### How to bump the version
+
+1. Update the `VERSION` file.
+2. Add an entry to `CHANGELOG.md`.
+3. Commit and tag: `git tag vX.Y.Z`.
+
+Full policy details are in [`docs/BOOTSTRAP_VERSIONING.md`](docs/BOOTSTRAP_VERSIONING.md).
+
+---
+
 ## Limitations and non-goals
 
 - This repo does **not** implement a CLI for end-users.
