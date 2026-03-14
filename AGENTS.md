@@ -377,6 +377,41 @@ Agents must understand and respect the following contract:
   If either shared helper changes, update both `test_bootstrap_core.py` and
   `test_bootstrap_doctor.py`.  Anti-drift hardening is preferred over feature sprawl.
 
+- **Doctor JSON output is a stable contract surface (Milestone 19).**
+  `schemas/bootstrap_doctor_report.schema.json` is the formal schema for `--json` output.
+  Downstream tools must depend on JSON output, not on parsing human-readable terminal text.
+  Human-readable output may change phrasing across releases; JSON must not break downstream consumers.
+
+- **`schema_version` is independent of the bootstrap repo `VERSION` file.**
+  `schema_version` in the JSON output tracks the shape of the JSON contract.
+  The `VERSION` file tracks the bootstrap tooling release.
+  These are separate versioning axes — do not conflate them or keep them in sync.
+
+- **Changes to JSON shape require schema and test updates.**
+  If you add, rename, or remove a field in `print_json_report()` or change the
+  `DOCTOR_REPORT_SCHEMA_VERSION`, you must also update `schemas/bootstrap_doctor_report.schema.json`
+  and add or adjust tests in `tests/test_bootstrap_doctor.py` (specifically the
+  `TestJsonSchemaPresence`, `TestJsonReportShape`, and `TestJsonReportFixtureStates` classes).
+  Bump `DOCTOR_REPORT_SCHEMA_VERSION`:
+  - patch: additive optional fields, no breaking changes
+  - minor: new required fields or enum additions (consumers must tolerate new enum values)
+  - major: renamed/removed required fields or semantically breaking changes
+
+- **Consumers of the JSON output must handle unknown enum values defensively.**
+  A minor version bump may add new enum values (e.g., a new `health_state` or `type` value).
+  Downstream consumers should not treat any enum set as permanently frozen.
+  Write consumers with a default/fallback case for unknown values.
+
+- **Recommendation objects: branch on `type`, not `value`.**
+  Each recommendation is `{"type": "command"|"note", "value": "..."}`.
+  Consumers must branch on `type` to distinguish runnable commands from notes.
+  Do not parse `value` strings to determine type — that couples consumers to incidental text.
+
+- **Human-readable and JSON output serve different purposes.**
+  Human-readable output is for interactive operator use — it may be verbose, ergonomic, and informal.
+  JSON output is for automation — it must be compact, stable, and schema-conforming.
+  Do not conflate these two purposes when making changes.
+
 ---
 
 Prompts live in `prompts/`. They are copy-paste-ready instructions for agent sessions.

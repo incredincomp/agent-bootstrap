@@ -823,5 +823,339 @@ class TestDoctorCoreAlignment(unittest.TestCase):
                 self.assertIn(rel_path, required_set)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JSON contract tests — Milestone 19
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestJsonSchemaPresence(unittest.TestCase):
+    """Prove the bootstrap_doctor_report schema file exists and is valid JSON."""
+
+    _SCHEMA_PATH = os.path.join(
+        _REPO_ROOT, "schemas", "bootstrap_doctor_report.schema.json"
+    )
+
+    def test_schema_file_exists(self):
+        self.assertTrue(
+            os.path.isfile(self._SCHEMA_PATH),
+            f"Schema file not found: {self._SCHEMA_PATH}",
+        )
+
+    def test_schema_file_is_valid_json(self):
+        with open(self._SCHEMA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        self.assertIsInstance(data, dict)
+
+    def test_schema_has_required_meta_fields(self):
+        with open(self._SCHEMA_PATH, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+        self.assertIn("$schema", schema)
+        self.assertIn("title", schema)
+        self.assertIn("type", schema)
+        self.assertIn("required", schema)
+        self.assertIn("properties", schema)
+
+    def test_schema_required_fields_list(self):
+        """The schema must declare the expected set of required top-level fields."""
+        with open(self._SCHEMA_PATH, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+        expected_required = {
+            "schema_version",
+            "target_dir",
+            "bootstrapped",
+            "marker_status",
+            "marker_era",
+            "required_files_status",
+            "missing_files",
+            "placeholder_status",
+            "files_with_placeholders",
+            "total_placeholder_count",
+            "health_state",
+            "recommendations",
+        }
+        self.assertEqual(set(schema["required"]), expected_required)
+
+    def test_schema_defines_recommendation_object(self):
+        """The schema must define a Recommendation object with type and value."""
+        with open(self._SCHEMA_PATH, "r", encoding="utf-8") as f:
+            schema = json.load(f)
+        self.assertIn("definitions", schema)
+        self.assertIn("Recommendation", schema["definitions"])
+        rec = schema["definitions"]["Recommendation"]
+        self.assertIn("type", rec.get("required", []))
+        self.assertIn("value", rec.get("required", []))
+
+
+class TestJsonReportShape(unittest.TestCase):
+    """Prove print_json_report() produces a conforming JSON structure."""
+
+    _VALID_HEALTH_STATES = {
+        "unbootstrapped",
+        "scaffold-applied-unpopulated",
+        "partially-populated",
+        "populated-and-healthy",
+        "stale-version-review-recommended",
+        "profile-mismatch-review-recommended",
+    }
+    _VALID_MARKER_STATUS = {"missing", "present", "incomplete"}
+    _VALID_MARKER_ERA = {"pre-version", "pre-profile", "versioned", "unknown"}
+    _VALID_PROFILE_CONFIDENCE = {"high", "medium", "low"}
+    _VALID_PROFILE_ALIGNMENT = {"aligned", "mismatch", "insufficient-evidence", "not-recorded"}
+    _VALID_REQUIRED_FILES_STATUS = {"all-present", "minor-gaps", "major-gaps"}
+    _VALID_PLACEHOLDER_STATUS = {"placeholders-remain", "no-placeholders-detected", "mixed"}
+    _VALID_SUGGESTED_PROFILES = {"generic", "python-service", "infra-repo", "vscode-extension", "kubernetes-platform"}
+    _VALID_RECOMMENDATION_TYPES = {"command", "note"}
+
+    def _get_json_output(self, target_dir):
+        """Run audit() and capture print_json_report() output as a parsed dict."""
+        import io
+        from contextlib import redirect_stdout
+        result = bd.audit(target_dir, _REPO_ROOT)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            bd.print_json_report(result)
+        return json.loads(buf.getvalue())
+
+    def test_required_top_level_keys_present(self):
+        """All required JSON keys must be present in the output."""
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        required = [
+            "schema_version", "target_dir", "bootstrapped", "marker_status",
+            "marker_era", "required_files_status", "missing_files",
+            "placeholder_status", "files_with_placeholders",
+            "total_placeholder_count", "health_state", "recommendations",
+        ]
+        for key in required:
+            with self.subTest(key=key):
+                self.assertIn(key, output)
+
+    def test_schema_version_present_and_semver(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn("schema_version", output)
+        import re
+        self.assertRegex(output["schema_version"], r"^\d+\.\d+\.\d+$")
+
+    def test_schema_version_value(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertEqual(output["schema_version"], bd.DOCTOR_REPORT_SCHEMA_VERSION)
+
+    def test_health_state_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["health_state"], self._VALID_HEALTH_STATES)
+
+    def test_marker_status_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["marker_status"], self._VALID_MARKER_STATUS)
+
+    def test_marker_era_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["marker_era"], self._VALID_MARKER_ERA)
+
+    def test_profile_confidence_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["profile_confidence"], self._VALID_PROFILE_CONFIDENCE)
+
+    def test_profile_alignment_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["profile_alignment"], self._VALID_PROFILE_ALIGNMENT)
+
+    def test_required_files_status_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["required_files_status"], self._VALID_REQUIRED_FILES_STATUS)
+
+    def test_placeholder_status_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["placeholder_status"], self._VALID_PLACEHOLDER_STATUS)
+
+    def test_suggested_profile_from_bounded_set(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIn(output["suggested_profile"], self._VALID_SUGGESTED_PROFILES)
+
+    def test_total_placeholder_count_is_integer(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIsInstance(output["total_placeholder_count"], int)
+        self.assertGreaterEqual(output["total_placeholder_count"], 0)
+
+    def test_missing_files_is_list(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIsInstance(output["missing_files"], list)
+
+    def test_files_with_placeholders_is_list(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIsInstance(output["files_with_placeholders"], list)
+
+    def test_bootstrapped_is_bool(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIsInstance(output["bootstrapped"], bool)
+
+    def test_recommendations_is_list(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertIsInstance(output["recommendations"], list)
+
+    def test_recommendation_objects_have_type_and_value(self):
+        """Every recommendation must be an object with 'type' and 'value'."""
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        for rec in output["recommendations"]:
+            with self.subTest(rec=rec):
+                self.assertIsInstance(rec, dict)
+                self.assertIn("type", rec)
+                self.assertIn("value", rec)
+                self.assertIn(rec["type"], self._VALID_RECOMMENDATION_TYPES)
+                self.assertIsInstance(rec["value"], str)
+                self.assertGreater(len(rec["value"]), 0)
+
+    def test_output_is_valid_json_string(self):
+        """print_json_report() output must be parseable JSON."""
+        with tempfile.TemporaryDirectory() as d:
+            result = bd.audit(d, _REPO_ROOT)
+            import io
+            from contextlib import redirect_stdout
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                bd.print_json_report(result)
+            # Should not raise
+            parsed = json.loads(buf.getvalue())
+        self.assertIsInstance(parsed, dict)
+
+
+class TestJsonReportFixtureStates(unittest.TestCase):
+    """
+    Fixture-backed JSON contract tests.
+    Prove JSON shape and key semantic fields for distinct health states.
+    """
+
+    def _get_json_output(self, target_dir):
+        import io
+        from contextlib import redirect_stdout
+        result = bd.audit(target_dir, _REPO_ROOT)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            bd.print_json_report(result)
+        return json.loads(buf.getvalue())
+
+    def test_unbootstrapped_state(self):
+        """Empty directory produces unbootstrapped state with correct JSON fields."""
+        with tempfile.TemporaryDirectory() as d:
+            output = self._get_json_output(d)
+        self.assertEqual(output["health_state"], "unbootstrapped")
+        self.assertFalse(output["bootstrapped"])
+        self.assertEqual(output["marker_status"], "missing")
+        self.assertEqual(output["required_files_status"], "major-gaps")
+        self.assertGreater(len(output["missing_files"]), 0)
+        # Recommendations exist and include at least one command
+        self.assertGreater(len(output["recommendations"]), 0)
+        cmd_types = {r["type"] for r in output["recommendations"]}
+        self.assertIn("command", cmd_types)
+
+    def test_scaffold_applied_unpopulated_state(self):
+        """Scaffold with placeholders produces scaffold-applied-unpopulated state."""
+        with tempfile.TemporaryDirectory() as d:
+            _write_marker(d, version=_TEST_MARKER_VERSION, profile="python-service",
+                          notes="{{BOOTSTRAP_NOTES}}")
+            _write_all_required_files(d, use_placeholders=True)
+            output = self._get_json_output(d)
+        self.assertEqual(output["health_state"], "scaffold-applied-unpopulated")
+        self.assertTrue(output["bootstrapped"])
+        self.assertIn(output["placeholder_status"],
+                      {"placeholders-remain", "mixed"})
+        self.assertGreater(output["total_placeholder_count"], 0)
+        self.assertGreater(len(output["files_with_placeholders"]), 0)
+
+    def test_populated_healthy_state(self):
+        """Fully populated repo with current version produces populated-and-healthy state."""
+        source_ver, _ = bc.read_version(_REPO_ROOT)
+        with tempfile.TemporaryDirectory() as d:
+            _write_marker(d, version=source_ver, profile="python-service")
+            _write_all_required_files(d, use_placeholders=False)
+            output = self._get_json_output(d)
+        self.assertEqual(output["health_state"], "populated-and-healthy")
+        self.assertTrue(output["bootstrapped"])
+        self.assertEqual(output["required_files_status"], "all-present")
+        self.assertEqual(output["placeholder_status"], "no-placeholders-detected")
+        self.assertEqual(output["total_placeholder_count"], 0)
+        self.assertEqual(output["missing_files"], [])
+
+    def test_stale_version_state(self):
+        """Repo with materially old version produces stale-version-review-recommended state."""
+        with tempfile.TemporaryDirectory() as d:
+            _write_marker(d, version="0.1.0", profile="python-service")
+            _write_all_required_files(d, use_placeholders=False)
+            output = self._get_json_output(d)
+        self.assertEqual(output["health_state"], "stale-version-review-recommended")
+        self.assertEqual(output["recorded_version"], "0.1.0")
+        # Recommendation should include a refresh command
+        cmd_values = [r["value"] for r in output["recommendations"] if r["type"] == "command"]
+        self.assertTrue(
+            any("refresh" in v for v in cmd_values),
+            f"Expected a refresh command in recommendations, got: {cmd_values}",
+        )
+
+    def test_note_recommendations_are_notes(self):
+        """Recommendations that are comments/guidance have type='note', not 'command'."""
+        with tempfile.TemporaryDirectory() as d:
+            # scaffold-applied state produces a comment recommendation
+            _write_marker(d, version=_TEST_MARKER_VERSION, profile="python-service",
+                          notes="{{BOOTSTRAP_NOTES}}")
+            _write_all_required_files(d, use_placeholders=True)
+            output = self._get_json_output(d)
+        # At least one recommendation should be a note (the comment about filling placeholders)
+        note_types = [r for r in output["recommendations"] if r["type"] == "note"]
+        self.assertGreater(len(note_types), 0)
+        for note in note_types:
+            # Notes must not start with '#' in their value (# was stripped)
+            self.assertFalse(note["value"].startswith("#"))
+
+
+class TestRecommendationsToStructured(unittest.TestCase):
+    """Prove _recommendations_to_structured() correctly classifies strings."""
+
+    def test_command_string_becomes_command(self):
+        result = bd._recommendations_to_structured(["python scripts/validate_bootstrap.py"])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["type"], "command")
+        self.assertEqual(result[0]["value"], "python scripts/validate_bootstrap.py")
+
+    def test_comment_string_becomes_note(self):
+        result = bd._recommendations_to_structured(["# Some guidance text"])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["type"], "note")
+        self.assertEqual(result[0]["value"], "Some guidance text")
+
+    def test_comment_strips_leading_hash_and_space(self):
+        result = bd._recommendations_to_structured(["# Fill placeholders"])
+        self.assertEqual(result[0]["value"], "Fill placeholders")
+
+    def test_empty_list(self):
+        self.assertEqual(bd._recommendations_to_structured([]), [])
+
+    def test_mixed_commands_and_notes(self):
+        inputs = [
+            "python scripts/validate_bootstrap.py",
+            "# Then fill placeholders",
+            "python scripts/bootstrap_status.py",
+        ]
+        result = bd._recommendations_to_structured(inputs)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0]["type"], "command")
+        self.assertEqual(result[1]["type"], "note")
+        self.assertEqual(result[2]["type"], "command")
+
+
 if __name__ == "__main__":
     unittest.main()

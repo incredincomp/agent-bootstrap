@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/agent-bootstrap/schemas/bootstrap_doctor_report.schema.json",
+  "title": "BootstrapDoctorReport",
+  "description": "Schema for the machine-readable JSON output of bootstrap_doctor.py --json. This is the stable contract for downstream tooling. Do not rely on human-readable terminal output for automation. Note: schema_version tracks the JSON contract version independently of the bootstrap repo VERSION file — they are different versioning axes.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "target_dir",
+    "bootstrapped",
+    "marker_status",
+    "marker_era",
+    "required_files_status",
+    "missing_files",
+    "placeholder_status",
+    "files_with_placeholders",
+    "total_placeholder_count",
+    "health_state",
+    "recommendations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this JSON output contract — independent of the bootstrap repo VERSION file. Follows semver: patch = additive/clarifying changes or new optional fields; minor = new required fields or new enum values (backward-compatible additions — consumers must tolerate new values); major = renamed/removed required fields or semantically breaking changes.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "target_dir": {
+      "type": "string",
+      "description": "Absolute path to the target repository that was inspected.",
+      "minLength": 1
+    },
+    "bootstrapped": {
+      "type": "boolean",
+      "description": "True if a bootstrap marker file (bootstrap/BOOTSTRAP_SOURCE.md) was found in the target repository."
+    },
+    "marker_status": {
+      "type": "string",
+      "description": "Classification of the bootstrap marker file completeness. 'missing' = no marker found; 'incomplete' = marker present but core fields are absent or still placeholders; 'present' = marker found with core fields filled.",
+      "enum": ["missing", "present", "incomplete"]
+    },
+    "marker_era": {
+      "type": "string",
+      "description": "Era classification of the bootstrap marker, derived from the version and profile fields recorded. 'pre-version' = no semver version recorded; 'pre-profile' = semver present but no profile; 'versioned' = both semver version and profile recorded; 'unknown' = version field present but unrecognized format.",
+      "enum": ["pre-version", "pre-profile", "versioned", "unknown"]
+    },
+    "recorded_version": {
+      "type": ["string", "null"],
+      "description": "Bootstrap source version recorded in the marker (semver string), or null if absent or still a placeholder."
+    },
+    "source_version": {
+      "type": ["string", "null"],
+      "description": "Current bootstrap source repository version read from the VERSION file, or null if unreadable."
+    },
+    "recorded_profile": {
+      "type": ["string", "null"],
+      "description": "Bootstrap profile recorded in the marker, or null if absent or still a placeholder."
+    },
+    "suggested_profile": {
+      "type": "string",
+      "description": "Profile suggested by heuristic analysis of the target repository file structure.",
+      "enum": ["generic", "python-service", "infra-repo", "vscode-extension", "kubernetes-platform"]
+    },
+    "profile_confidence": {
+      "type": "string",
+      "description": "Confidence level of the profile suggestion. 'high' = strong multiple signals; 'medium' = moderate evidence; 'low' = weak or ambiguous evidence.",
+      "enum": ["high", "medium", "low"]
+    },
+    "profile_alignment": {
+      "type": "string",
+      "description": "Alignment between the recorded marker profile and the currently suggested profile. 'aligned' = they match; 'mismatch' = they differ with sufficient evidence; 'insufficient-evidence' = suggestion confidence too low to classify mismatch; 'not-recorded' = no profile in the marker.",
+      "enum": ["aligned", "mismatch", "insufficient-evidence", "not-recorded"]
+    },
+    "required_files_status": {
+      "type": "string",
+      "description": "Classification of required managed-file presence. 'all-present' = no required files missing; 'minor-gaps' = 1–2 files missing; 'major-gaps' = 3 or more files missing.",
+      "enum": ["all-present", "minor-gaps", "major-gaps"]
+    },
+    "missing_files": {
+      "type": "array",
+      "description": "List of required managed files that are absent from the target repository.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "placeholder_status": {
+      "type": "string",
+      "description": "Classification of unfilled {{PLACEHOLDER}} presence across managed files. 'placeholders-remain' = all checked files still have placeholders; 'no-placeholders-detected' = no placeholders found in any checked file; 'mixed' = some files populated, some still have placeholders.",
+      "enum": ["placeholders-remain", "no-placeholders-detected", "mixed"]
+    },
+    "files_with_placeholders": {
+      "type": "array",
+      "description": "List of managed files that still contain unfilled {{PLACEHOLDER}} markers.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "total_placeholder_count": {
+      "type": "integer",
+      "description": "Total number of unfilled placeholder instances found across all checked managed files.",
+      "minimum": 0
+    },
+    "health_state": {
+      "type": "string",
+      "description": "Overall bootstrap health classification. These six values are the stable vocabulary — do not rename without a semver minor version bump.",
+      "enum": [
+        "unbootstrapped",
+        "scaffold-applied-unpopulated",
+        "partially-populated",
+        "populated-and-healthy",
+        "stale-version-review-recommended",
+        "profile-mismatch-review-recommended"
+      ]
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Structured recommended next actions for the operator. Each item is either a runnable command or an informational note.",
+      "items": {
+        "$ref": "#/definitions/Recommendation"
+      }
+    }
+  },
+  "definitions": {
+    "Recommendation": {
+      "type": "object",
+      "description": "A single recommended next action. Consumers must branch on 'type' to distinguish runnable commands from informational notes — do not parse 'value' to determine type.",
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "'command' = a shell command the operator can run directly; 'note' = informational guidance that is not directly executable. Consumers should handle unknown type values defensively (a minor version bump may add new types).",
+          "enum": ["command", "note"]
+        },
+        "value": {
+          "type": "string",
+          "description": "The command string or note text. Do not parse this string to determine the recommendation type — use 'type' instead.",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

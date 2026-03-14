@@ -719,9 +719,39 @@ def print_report(result, verbose=False):
     print()
 
 
+# Version of the JSON output contract. Increment when the JSON shape changes:
+#   patch — additive/clarifying changes or new optional fields (backward-compatible)
+#   minor — new required fields or changed enum values (backward-compatible additions)
+#   major — renamed/removed required fields or semantically breaking changes
+DOCTOR_REPORT_SCHEMA_VERSION = "1.0.0"
+
+
+def _recommendations_to_structured(recommendations):
+    """
+    Convert recommendation strings to structured objects for JSON output.
+
+    Strings starting with '#' become notes; all others become commands.
+    This keeps recommend_actions() returning plain strings (used by human-readable
+    output) while providing a machine-readable structure in JSON.
+    """
+    result = []
+    for cmd in recommendations:
+        if cmd.startswith("#"):
+            result.append({"type": "note", "value": cmd[1:].strip()})
+        else:
+            result.append({"type": "command", "value": cmd})
+    return result
+
+
 def print_json_report(result):
-    """Print a JSON doctor report."""
+    """
+    Print a JSON doctor report conforming to schemas/bootstrap_doctor_report.schema.json.
+
+    This is the stable machine-readable contract. Downstream tools should depend
+    on this JSON output rather than parsing human-readable terminal text.
+    """
     output = {
+        "schema_version": DOCTOR_REPORT_SCHEMA_VERSION,
         "target_dir": result["target_dir"],
         "bootstrapped": result["bootstrapped"],
         "marker_status": result["marker_status"],
@@ -738,7 +768,7 @@ def print_json_report(result):
         "files_with_placeholders": result["files_with_placeholders"],
         "total_placeholder_count": result["total_placeholder_count"],
         "health_state": result["health_state"],
-        "recommendations": result["recommendations"],
+        "recommendations": _recommendations_to_structured(result["recommendations"]),
     }
     print(json.dumps(output, indent=2))
 
