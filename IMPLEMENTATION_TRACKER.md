@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 17 complete — Shared Bootstrap Core and Contract Tests**
+**Phase: Milestone 18 complete — Target Repo Bootstrap Doctor / Audit Contract Test Expansion**
 
 ---
 
@@ -36,6 +36,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 13–15 | Versioning, Status, Profiles | ✅ Complete | VERSION, CHANGELOG, bootstrap_status.py, suggest_profile.py; State E; 39 required files, 44 total checks |
 | 16 | Target Repo Bootstrap Doctor / Audit Mode | ✅ Complete | `bootstrap_doctor.py`; 6 health states; State F fixture proof; README/AGENTS/tracker updated |
 | 17 | Shared Bootstrap Core and Contract Tests | ✅ Complete | `bootstrap_core.py`; 6 scripts refactored; 39 contract tests; CI updated; 41 required files, 46 total checks |
+| 18 | Doctor / Audit Contract Test Expansion | ✅ Complete | `tests/test_bootstrap_doctor.py`; 77 diagnosis contract tests; 42 required files, 47 total checks |
 
 ---
 
@@ -123,11 +124,73 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
+## Decisions made in Milestone 18 (doctor / audit contract test expansion)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| New `tests/test_bootstrap_doctor.py` for doctor-specific contract tests | Keep doctor semantics separate from core semantics; focused tests are easier to read and update | Appending to test_bootstrap_core.py (rejected: would mix core-helper tests with diagnosis-logic tests) |
+| Test `_semver_tuple`, `_is_materially_behind`, and all status helpers directly | These are the key semantic units; unit-testing them directly catches bugs before they propagate | Only integration tests via audit() (rejected: harder to isolate which semantic broke) |
+| Integration tests via `audit()` using real temp dirs | Proves the full pipeline end-to-end for key states; more realistic than mocking | Mocking internal calls (rejected: would hide integration bugs) |
+| Scaffold test writes `{{BOOTSTRAP_NOTES}}` in marker | Accurately reflects real apply_bootstrap.py behavior: system fields are filled, `{{BOOTSTRAP_NOTES}}` is left for the agent | Marker with no placeholders (rejected: would not match actual scaffold-applied state) |
+| No new health states or CLI changes | Milestone scope is proof and anti-drift, not feature expansion; existing six states are already well-specified | Adding new states (rejected: out of scope) |
+| `test_bootstrap_doctor.py` added to BOOTSTRAP_REPO_REQUIRED_FILES in validate_bootstrap.py and manifest | Ensures future validate runs confirm the test file exists; consistent with treatment of test_bootstrap_core.py | Not adding (rejected: would leave a required asset untracked) |
+
+---
+
+## Files created/updated in Milestone 18 (doctor / audit contract test expansion)
+
+### tests/ (new file)
+- `tests/test_bootstrap_doctor.py` — new; 77 contract tests covering all six health states,
+  version comparison helpers, marker/files/placeholder/profile-alignment status helpers,
+  recommend_actions() for every state, era classification alignment with bootstrap_core,
+  and audit() integration using real temporary directories
+
+### scripts/ (updated)
+- `scripts/validate_bootstrap.py` — added `tests/test_bootstrap_doctor.py` to
+  `BOOTSTRAP_REPO_REQUIRED_FILES`
+
+### Root
+- `AGENTS.md` — added anti-drift rules to "Bootstrap doctor — advisory-only rules" section:
+  diagnostic semantics are contract-tested; changes require test updates; output phrasing
+  can vary but semantic meaning must not
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 18 recorded
+- `README.md` — updated repository layout tree; expanded Contract tests section to document
+  test_bootstrap_doctor.py coverage and doctor conservative behavior guarantee
+
+### Manifest
+- `bootstrap-manifest.yaml` — added `tests/test_bootstrap_doctor.py` to
+  `bootstrap_repo_required_files`
+
+---
+
+## Validation status (Milestone 18)
+
+- `python scripts/validate_bootstrap.py` → PASSED (42 required files, 47 total checks)
+- `python -m unittest discover -s tests -p 'test_*.py'` → 120 tests, 0 failures
+  (43 core contract tests + 77 doctor contract tests)
+- `python scripts/run_fixture_selftest.py` → B:PASS C:PASS D:PASS E:PASS F:PASS (both fixtures)
+
+---
+
+## Known limitations (Milestone 18)
+
+- Milestone 18 adds no new health states or CLI flags; all diagnosis semantics tested are
+  those already present since Milestone 16.
+- `profile-mismatch-review-recommended` integration test relies on the doctor's inline
+  profile-scoring logic; not tested against the real `suggest_profile.py` subprocess.
+  Cross-tool alignment is proven at the unit level (era/marker helpers) rather than by
+  subprocess integration.
+- No fixture for `stale-version-review-recommended` was added to State F; this state is
+  covered by unit tests but not the end-to-end fixture harness (out of scope).
+
+---
+
 ## Known limitations / follow-up opportunities
 
 - `bootstrap_doctor.py` still carries its own inline profile-suggestion scoring (not imported from `suggest_profile.py`) — this was a pre-Milestone-17 design decision (Milestone 16) preserved for stability.
 - `suggest_profile.py` uses a different `PROFILES` structure (signal-based) than `bootstrap_core.PROFILES` (template-based); the profile names must stay in sync manually. A follow-up could add a consistency check.
 - No `__init__.py` or packaging — intentional; the scripts directory is not a package.
+- The `stale-version-review-recommended` health state is covered by unit tests but not the end-to-end fixture harness; a future milestone could add a stale-version fixture state to State F for full end-to-end proof.
 
 ---
 

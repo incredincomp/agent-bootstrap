@@ -10,6 +10,31 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.15.0] — 2026-03-14
+
+### Added (Milestone 18)
+- `tests/test_bootstrap_doctor.py` — 77 bounded contract tests covering all key
+  target-repo diagnosis semantics in `bootstrap_doctor.py`: all six health state
+  classifications, version comparison helpers (`_semver_tuple`, `_is_materially_behind`),
+  marker status, required-files status, placeholder status, profile alignment
+  classification, recommended next-action guidance for every health state,
+  era classification alignment between doctor and `bootstrap_core`, and
+  `audit()` integration tests using real temporary directories.
+
+### Changed (Milestone 18)
+- `scripts/validate_bootstrap.py`: added `tests/test_bootstrap_doctor.py` to
+  `BOOTSTRAP_REPO_REQUIRED_FILES` (42 required files, 47 total checks).
+- `bootstrap-manifest.yaml`: added `tests/test_bootstrap_doctor.py` to
+  `bootstrap_repo_required_files`.
+- `AGENTS.md`: expanded "Bootstrap doctor — advisory-only rules" section with
+  anti-drift rules: diagnostic semantics are contract-tested and must not drift
+  casually; changes to doctor/status/suggest shared meaning require test updates.
+- `README.md`: updated repository layout tree; expanded "Contract tests" section
+  to document `test_bootstrap_doctor.py` coverage and the conservative-behavior
+  guarantees that the tests prove.
+
+---
+
 ## [0.14.0] — 2026-03-14
 
 ### Added (Milestone 17)

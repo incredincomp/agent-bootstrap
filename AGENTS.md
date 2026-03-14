@@ -364,6 +364,18 @@ Agents must understand and respect the following contract:
 - **The doctor must never shell out to external processes.**
   All checks use direct filesystem inspection. No subprocess calls.
 
+- **Diagnostic semantics are contract-tested and must not drift casually.**
+  `tests/test_bootstrap_doctor.py` proves all six health state classifications,
+  version comparison helpers, profile alignment, placeholder/required-file status,
+  and recommended next-action guidance.  Changes to any of these behaviors require
+  corresponding test updates — output phrasing can vary, but semantic meaning must not.
+
+- **Changes to doctor/status/suggest shared meaning require test updates.**
+  `classify_era()` in bootstrap_doctor delegates to `bootstrap_core.classify_marker_era()`.
+  `parse_marker()` delegates to `bootstrap_core.parse_bootstrap_marker()`.
+  If either shared helper changes, update both `test_bootstrap_core.py` and
+  `test_bootstrap_doctor.py`.  Anti-drift hardening is preferred over feature sprawl.
+
 ---
 
 Prompts live in `prompts/`. They are copy-paste-ready instructions for agent sessions.
