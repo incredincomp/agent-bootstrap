@@ -479,7 +479,8 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 │  ├─ suggest_profile.py           ← target repo profile suggestion
 │  └─ bootstrap_doctor.py          ← target repo health audit (read-only)
 └─ tests/
-   └─ test_bootstrap_core.py       ← contract tests for shared semantics
+   ├─ test_bootstrap_core.py       ← contract tests for shared semantics
+   └─ test_bootstrap_doctor.py     ← contract tests for doctor/diagnosis semantics
 ```
 
 ---
@@ -537,6 +538,20 @@ the shared semantics are stable:
 - marker parsing from sample text
 - era classification (all four states)
 - placeholder helpers
+
+`tests/test_bootstrap_doctor.py` contains bounded contract tests that prove
+the target-repo diagnosis semantics are stable:
+- all six health state classifications
+- version comparison helpers (materially-behind logic)
+- marker status, required-files status, and placeholder status helpers
+- profile alignment classification (aligned / mismatch / insufficient-evidence / not-recorded)
+- recommended next-action guidance for every health state (conservative by default — no `--force`)
+- era classification alignment between `bootstrap_doctor` and `bootstrap_core`
+- `audit()` integration for key states using real temporary directories
+
+Doctor behavior is intentionally conservative and stable: it never recommends
+`--force`, never shells out to external processes, and never mutates any files.
+These properties are proved by the contract tests and must remain stable.
 
 Run the contract tests locally:
 
