@@ -356,9 +356,7 @@ when is refresh safe.
 #### Root (modified)
 - `AGENTS.md` — added `## Version discipline` section with version bump rules
 - `IMPLEMENTATION_TRACKER.md` — this file; Milestone 13 recorded
-- `bootstrap-manifest.yaml` — added `bootstrap_version` field; added new required files
-  (`VERSION`, `CHANGELOG.md`, `docs/BOOTSTRAP_VERSIONING.md`) to `bootstrap_repo_required_files`;
-  added `BOOTSTRAP_SOURCE_REVISION` to `auto_filled_placeholders`
+- `bootstrap-manifest.yaml` — removed `bootstrap_version` field (replaced with a comment pointing to VERSION as the authoritative source); added new required files
 - `README.md` — added `## Bootstrap versioning` section
 
 ### Validation performed
@@ -369,8 +367,6 @@ when is refresh safe.
 - Manual verification: major-version drift warning triggered correctly
 
 ### Known limitations (Milestone 13)
-- `VERSION` is not automatically cross-validated against `bootstrap-manifest.yaml`'s
-  `bootstrap_version` field. They should match; a future cleanup could add this check.
 - No automated git tagging or GitHub Releases integration — intentionally out of scope.
 - The PROFILES dict in `apply_bootstrap.py` and `refresh_bootstrap.py` remains duplicated
   (not related to versioning; deferred from Milestone 12).
@@ -395,9 +391,6 @@ when is refresh safe.
   from `bootstrap-manifest.yaml` rather than the static fallback list (currently in sync;
   unifying reduces future drift)
 - [ ] Add profile-specific fixture proof data for vscode-extension and kubernetes-platform
-  (currently proven indirectly through apply dry-run; dedicated fixtures deferred)
-- [ ] Cross-validate `VERSION` file content against `bootstrap-manifest.yaml bootstrap_version`
-  field in `validate_bootstrap.py` (deferred; currently requires them to match manually)
 
 ---
 

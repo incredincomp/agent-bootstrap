@@ -5,7 +5,9 @@
 # what behaviors are required and forbidden, and when a bootstrap run is complete.
 
 version: "1.0.0"
-bootstrap_version: "0.13.0"
+# bootstrap_version is defined in the VERSION file at the repository root.
+# That file is the single authoritative source — scripts read it directly.
+# See docs/BOOTSTRAP_VERSIONING.md for the version policy.
 
 repo:
   name: agent-bootstrap
