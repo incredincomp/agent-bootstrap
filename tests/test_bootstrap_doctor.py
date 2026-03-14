@@ -30,6 +30,12 @@ import bootstrap_core as bc
 # Helpers shared across test classes
 # ─────────────────────────────────────────────────────────────────────────────
 
+# A representative marker version used in unit-test fixtures.
+# This is deliberately NOT the current source version — unit tests for
+# classify_health, recommend_actions, etc. do not depend on the live VERSION file.
+# Integration tests that need the current source version read it dynamically.
+_TEST_MARKER_VERSION = "0.14.0"
+
 def _make_marker(version=None, profile=None, found=True,
                  source_repo="https://github.com/example/bootstrap",
                  date="2026-01-01", agent="apply_bootstrap.py",
@@ -48,7 +54,7 @@ def _make_marker(version=None, profile=None, found=True,
     }
 
 
-def _write_marker(tmpdir, version="0.14.0", profile="python-service",
+def _write_marker(tmpdir, version=_TEST_MARKER_VERSION, profile="python-service",
                   notes="N/A"):
     """
     Write a minimal BOOTSTRAP_SOURCE.md marker file to tmpdir.
@@ -685,13 +691,15 @@ class TestAuditIntegration(unittest.TestCase):
 
     def test_populated_and_healthy(self):
         """Directory with marker + real content files → populated-and-healthy."""
-        # Use the actual current source version so the repo is not considered stale.
-        current_version, _ = bc.read_version(_REPO_ROOT)
-        marker_version = current_version or "0.15.0"
-        with tempfile.TemporaryDirectory() as d:
-            _write_marker(d, version=marker_version, profile="python-service")
-            _write_all_required_files(d, use_placeholders=False)
-            result = bd.audit(d, _REPO_ROOT)
+        # Use a self-contained fake source root with a matching VERSION file so
+        # the test is version-independent and does not rely on the live VERSION file.
+        with tempfile.TemporaryDirectory() as source_root:
+            with open(os.path.join(source_root, "VERSION"), "w") as vf:
+                vf.write(_TEST_MARKER_VERSION + "\n")
+            with tempfile.TemporaryDirectory() as d:
+                _write_marker(d, version=_TEST_MARKER_VERSION, profile="python-service")
+                _write_all_required_files(d, use_placeholders=False)
+                result = bd.audit(d, source_root)
         self.assertEqual(result["health_state"], "populated-and-healthy")
 
     def test_partially_populated(self):
