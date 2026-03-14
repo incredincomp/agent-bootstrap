@@ -37,6 +37,18 @@ import os
 import re
 import sys
 
+# Shared bootstrap semantics
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import (  # noqa: E402
+    PLACEHOLDER_RE,
+    SEMVER_RE,
+    parse_bootstrap_marker,
+    is_placeholder,
+    classify_marker_era,
+    find_placeholders,
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants — aligned with validate_bootstrap.py expectations
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,11 +76,8 @@ TARGET_PLACEHOLDER_FILES = [
     "bootstrap/BOOTSTRAP_SOURCE.md",
 ]
 
-PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
-SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+")
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Marker parsing — aligned with bootstrap_status.py
+# Marker parsing — uses shared bootstrap_core helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def parse_marker(target_dir):
@@ -78,57 +87,7 @@ def parse_marker(target_dir):
     Returns a dict with marker fields; values may be None (not recorded) or
     the raw placeholder string if never filled.
     """
-    marker_path = os.path.join(target_dir, "bootstrap", "BOOTSTRAP_SOURCE.md")
-    result = {
-        "found": False,
-        "path": marker_path,
-        "source_repo": None,
-        "version": None,
-        "revision": None,
-        "date": None,
-        "agent": None,
-        "prompt": None,
-        "profile": None,
-    }
-
-    if not os.path.isfile(marker_path):
-        return result
-
-    result["found"] = True
-
-    field_map = {
-        "bootstrap source repository": "source_repo",
-        "bootstrap source version": "version",
-        "bootstrap source revision": "revision",
-        "bootstrap date": "date",
-        "agent / operator": "agent",
-        "prompt used": "prompt",
-        "bootstrap profile": "profile",
-    }
-
-    try:
-        with open(marker_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if "|" not in line:
-                    continue
-                parts = [p.strip() for p in line.strip().strip("|").split("|")]
-                if len(parts) < 2:
-                    continue
-                key = parts[0].lower()
-                value = parts[1] if len(parts) > 1 else ""
-                if key in field_map:
-                    result[field_map[key]] = value or None
-    except OSError:
-        pass
-
-    return result
-
-
-def is_placeholder(value):
-    """Return True if the value looks like an unfilled {{PLACEHOLDER}}."""
-    if value is None:
-        return False
-    return bool(re.match(r"^\{\{[A-Z_][A-Z0-9_]*\}\}$", value.strip()))
+    return parse_bootstrap_marker(target_dir)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -178,7 +137,7 @@ def check_placeholders(target_dir):
                 content = f.read()
         except OSError:
             continue
-        found = PLACEHOLDER_RE.findall(content)
+        found = find_placeholders(content)
         if found:
             files_with.append(rel_path)
             total += len(found)
@@ -377,25 +336,9 @@ def classify_era(marker):
 
     Returns one of: "pre-version", "pre-profile", "versioned", "unknown"
 
-    Semantics are aligned with bootstrap_status.py's era interpretation:
-      pre-version — version is absent, a placeholder, or not a semver string
-      pre-profile  — version is valid semver but profile is absent or placeholder
-      versioned    — version is valid semver and profile is recorded
-      unknown      — version field is present but not a recognizable semver value
+    Delegates to the shared classify_marker_era() helper in bootstrap_core.
     """
-    version = marker.get("version")
-    profile = marker.get("profile")
-
-    if version is None or is_placeholder(version):
-        return "pre-version"
-    if not SEMVER_RE.match(version):
-        # Version field present but not parseable semver — mirrors bootstrap_status.py "unknown" era
-        return "unknown"
-
-    if profile is None or is_placeholder(profile):
-        return "pre-profile"
-
-    return "versioned"
+    return classify_marker_era(marker)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

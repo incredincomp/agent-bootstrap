@@ -10,7 +10,53 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.14.0] — 2026-03-14
+
+### Added (Milestone 17)
+- `scripts/bootstrap_core.py` — small shared internal module centralising the
+  bootstrap semantics reused across multiple scripts: `PLACEHOLDER_RE`, `SEMVER_RE`,
+  `read_version()`, `load_manifest()`, `get_supported_profiles()`, `resolve_profile()`,
+  `get_bootstrap_marker_path()`, `parse_bootstrap_marker()`, `classify_marker_era()`,
+  `is_placeholder()`, `has_placeholders()`, `find_placeholders()`,
+  `resolve_template_mappings()`, and the canonical `PROFILES` dict.
+- `tests/test_bootstrap_core.py` — 39 bounded contract tests covering all public
+  helpers in `bootstrap_core.py`: regex constants, version parsing, manifest loading,
+  profile enumeration/validation, template mapping resolution, marker parsing,
+  era classification, and placeholder helpers.
+
+### Changed (Milestone 17)
+- `scripts/apply_bootstrap.py`: imports `PROFILES`, `DEFAULT_PROFILE`,
+  `read_version`, `resolve_template_mappings`, `get_supported_profiles` from
+  `bootstrap_core`; removed duplicated definitions.
+- `scripts/refresh_bootstrap.py`: imports `PLACEHOLDER_RE`, `PROFILES`,
+  `DEFAULT_PROFILE`, `read_version`, `resolve_template_mappings`,
+  `get_bootstrap_marker_path`, `parse_bootstrap_marker`, `has_placeholders` from
+  `bootstrap_core`; removed duplicated definitions; `classify_file()` uses
+  `has_placeholders()`.
+- `scripts/bootstrap_status.py`: imports `SEMVER_RE`, `read_version`,
+  `parse_bootstrap_marker`, `is_placeholder`, `classify_marker_era` from
+  `bootstrap_core`; removed duplicated `parse_marker()`/`is_placeholder()`;
+  `report_target_status()` uses `classify_marker_era()` for era logic.
+- `scripts/bootstrap_doctor.py`: imports `PLACEHOLDER_RE`, `SEMVER_RE`,
+  `parse_bootstrap_marker`, `is_placeholder`, `classify_marker_era`,
+  `find_placeholders` from `bootstrap_core`; removed duplicated definitions;
+  `classify_era()` delegates to `classify_marker_era()`.
+- `scripts/validate_bootstrap.py`: imports `PLACEHOLDER_RE` from `bootstrap_core`.
+- `scripts/run_fixture_selftest.py`: imports `PLACEHOLDER_RE` from `bootstrap_core`.
+- `scripts/validate_bootstrap.py`: added `scripts/bootstrap_core.py` and
+  `tests/test_bootstrap_core.py` to `BOOTSTRAP_REPO_REQUIRED_FILES` (41 required
+  files, 46 total checks).
+- `bootstrap-manifest.yaml`: added `scripts/bootstrap_core.py` and
+  `tests/test_bootstrap_core.py` to `bootstrap_repo_required_files`.
+- `.github/workflows/ci.yml`: added `scripts/bootstrap_core.py` to py_compile check;
+  added `python -m unittest discover -s tests -p 'test_*.py' -v` step before
+  fixture self-tests.
+- `README.md`: added `## Shared bootstrap core` section; updated repo layout;
+  updated CI table; updated local-validation command block.
+- `AGENTS.md`: added `## Shared bootstrap core and contract tests` section with
+  anti-drift rules; updated CI commands; updated profile-expansion rule to reference
+  `bootstrap_core.py` as the authoritative `PROFILES` source; updated forbidden
+  actions to reference `bootstrap_core.py`.
 
 ### Added (Milestone 15)
 - `scripts/suggest_profile.py` — read-only profile suggestion tool. Inspects a

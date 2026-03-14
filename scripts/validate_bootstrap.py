@@ -24,10 +24,10 @@ import os
 import re
 import sys
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Regex that matches unfilled template placeholders, e.g. {{REPO_NAME}}
-# ─────────────────────────────────────────────────────────────────────────────
-PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
+# Shared bootstrap semantics
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import PLACEHOLDER_RE  # noqa: E402
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Required files for the bootstrap SOURCE repository (this repo)
@@ -62,6 +62,8 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "scripts/bootstrap_status.py",
     "scripts/suggest_profile.py",
     "scripts/bootstrap_doctor.py",
+    "scripts/bootstrap_core.py",
+    "tests/test_bootstrap_core.py",
     "fixtures/targets/minimal-python-service/README.md",
     "fixtures/targets/minimal-python-service/conftest.py",
     "fixtures/targets/minimal-infra-repo/README.md",

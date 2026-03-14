@@ -136,7 +136,7 @@ Do not:
 - Silently change the semantics of prompt files.
 - Blindly overwrite populated target-repo files during refresh — always classify first.
 - Change apply, refresh, or validation logic in ways that break safe-by-default behavior.
-- Add new profiles without updating all four locations: PROFILES dicts, manifest, required-files list, and fixture/validation proof.
+- Add new profiles without updating all locations: `PROFILES` in `bootstrap_core.py`, `bootstrap-manifest.yaml`, required-files list in `validate_bootstrap.py`, and fixture/validation proof.
 
 ---
 
@@ -205,8 +205,9 @@ Rules:
 
 The workflow runs these commands in order:
 ```
-python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py scripts/bootstrap_status.py scripts/suggest_profile.py scripts/bootstrap_doctor.py
+python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py scripts/bootstrap_status.py scripts/suggest_profile.py scripts/bootstrap_doctor.py scripts/bootstrap_core.py
 python scripts/validate_bootstrap.py
+python -m unittest discover -s tests -p 'test_*.py' -v
 python scripts/run_fixture_selftest.py
 ```
 
@@ -222,6 +223,45 @@ Rules:
 - Include a header comment in each template explaining its purpose.
 - Keep structure clear enough that a future agent can fill it without this chat context.
 - Every template must have at least: a title, a purpose statement, and placeholders for key fields.
+
+---
+
+## Shared bootstrap core and contract tests
+
+`scripts/bootstrap_core.py` is the single source of truth for shared bootstrap semantics.
+
+### Rules for agents
+
+- **Shared semantics belong in `bootstrap_core.py`, not reimplemented ad hoc.**
+  When adding new semantic logic that is used (or likely to be used) by more than one
+  script, add it to the core, not to each script independently.
+
+- **User-facing scripts should consume shared helpers where practical.**
+  `apply_bootstrap.py`, `refresh_bootstrap.py`, `bootstrap_status.py`,
+  `bootstrap_doctor.py`, `validate_bootstrap.py`, and `run_fixture_selftest.py`
+  import from `bootstrap_core`.  Keep that pattern.
+
+- **Script-specific output and CLI logic stays in each script.**
+  Do not move output formatting, argument parsing, or script-specific control flow
+  into the core. The core is for pure semantic helpers only.
+
+- **Contract tests must be updated alongside meaningful changes to shared semantics.**
+  `tests/test_bootstrap_core.py` proves the stability of the core's public helpers.
+  If you add or change a helper in the core, add or update the corresponding test.
+
+- **Keep the core small.**
+  If a piece of logic is only used by one script and is unlikely to be reused, leave
+  it in that script. Prefer consolidation of confirmed-duplicate logic over
+  preemptive abstraction.
+
+- **Future refactors should prefer drift reduction over clever architecture.**
+  The goal is that a fix to a shared semantic (e.g., marker field name, era
+  classification rule) happens in one place and all scripts benefit automatically.
+
+- **The `PROFILES` dict in `bootstrap_core.py` is authoritative.**
+  `apply_bootstrap.py` and `refresh_bootstrap.py` import it.  `suggest_profile.py`
+  maintains its own signal dict (heuristic, not structural) but the profile names
+  it references must match the core's `PROFILES` keys.
 
 ---
 
@@ -245,9 +285,11 @@ They are implemented as manifest-driven template overlays — a small and explic
   Do not create profile variants that duplicate the generic template with trivial changes.
 
 - **Future profile expansion must preserve CI/self-test coverage.**
-  Any new profile must be added to `PROFILES` in `apply_bootstrap.py` and `refresh_bootstrap.py`,
-  to `bootstrap-manifest.yaml`, to `BOOTSTRAP_REPO_REQUIRED_FILES` in `validate_bootstrap.py`,
-  and must be proven through a fixture or explicit validation run before declaring it operational.
+  Any new profile must be added to `PROFILES` in `bootstrap_core.py` (the single
+  authoritative source), `apply_bootstrap.py` and `refresh_bootstrap.py` import from
+  the core automatically.  Also update `bootstrap-manifest.yaml`, add the template
+  to `BOOTSTRAP_REPO_REQUIRED_FILES` in `validate_bootstrap.py`, and prove it
+  through a fixture or explicit validation run before declaring it operational.
 
 - **Prefer extending manifest mappings over ad hoc special cases in scripts.**
   Profile logic lives in the `PROFILES` dict (scripts) and the `profiles:` section (manifest).

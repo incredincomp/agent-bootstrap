@@ -25,10 +25,13 @@ jobs:
         run: python --version
 
       - name: Check script syntax
-        run: python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py scripts/bootstrap_status.py scripts/suggest_profile.py scripts/bootstrap_doctor.py
+        run: python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py scripts/bootstrap_status.py scripts/suggest_profile.py scripts/bootstrap_doctor.py scripts/bootstrap_core.py
 
       - name: Validate bootstrap repository structure
         run: python scripts/validate_bootstrap.py
+
+      - name: Run contract tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Run fixture end-to-end self-tests
         run: python scripts/run_fixture_selftest.py

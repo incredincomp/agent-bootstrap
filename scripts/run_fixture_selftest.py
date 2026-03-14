@@ -47,8 +47,10 @@ import subprocess
 import sys
 import tempfile
 
-# Regex matching unfilled template placeholders, e.g. {{REPO_NAME}}
-PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
+# Shared bootstrap semantics
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import PLACEHOLDER_RE  # noqa: E402
 
 # Paths relative to the bootstrap repo root
 FIXTURES_TARGETS_DIR = "fixtures/targets"
