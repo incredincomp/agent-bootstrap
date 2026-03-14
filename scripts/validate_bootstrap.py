@@ -56,6 +56,7 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "schemas/implementation_tracker.schema.json",
     "schemas/repo_discovery.schema.json",
     "schemas/bootstrap_doctor_report.schema.json",
+    "schemas/bootstrap_bulk_audit_report.schema.json",
     "scripts/validate_bootstrap.py",
     "scripts/apply_bootstrap.py",
     "scripts/run_fixture_selftest.py",
@@ -64,8 +65,10 @@ BOOTSTRAP_REPO_REQUIRED_FILES = [
     "scripts/suggest_profile.py",
     "scripts/bootstrap_doctor.py",
     "scripts/bootstrap_core.py",
+    "scripts/bulk_audit.py",
     "tests/test_bootstrap_core.py",
     "tests/test_bootstrap_doctor.py",
+    "tests/test_bulk_audit.py",
     "fixtures/targets/minimal-python-service/README.md",
     "fixtures/targets/minimal-python-service/conftest.py",
     "fixtures/targets/minimal-infra-repo/README.md",
@@ -83,6 +86,7 @@ JSON_FILES_TO_VALIDATE = [
     "schemas/implementation_tracker.schema.json",
     "schemas/repo_discovery.schema.json",
     "schemas/bootstrap_doctor_report.schema.json",
+    "schemas/bootstrap_bulk_audit_report.schema.json",
     "templates/artifacts/ai/repo_discovery.json.template",
 ]
 
