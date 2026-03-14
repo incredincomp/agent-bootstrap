@@ -297,5 +297,80 @@ class TestHasAndFindPlaceholders(unittest.TestCase):
         self.assertEqual(bc.find_placeholders("nothing here"), [])
 
 
+class TestSuggestProfileConsistency(unittest.TestCase):
+    """
+    Cross-script consistency: suggest_profile.py's PROFILES keys must be a
+    strict subset of bootstrap_core.PROFILES keys.
+
+    suggest_profile.py intentionally keeps its own PROFILES dict because its
+    values are heuristic signal lists, not template overrides — a different data
+    shape.  However the profile *names* must stay in sync with bootstrap_core so
+    the two tools agree on what profiles exist.
+
+    'generic' is absent from suggest_profile.PROFILES by design: it is the
+    "nothing matched" fallback, not a profile with positive heuristic signals.
+    """
+
+    def _get_suggest_profile_keys(self):
+        """Parse suggest_profile.py's PROFILES dict keys without executing the file."""
+        import ast
+        suggest_path = os.path.join(_SCRIPTS_DIR, "suggest_profile.py")
+        with open(suggest_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Assign)
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id == "PROFILES"
+                and isinstance(node.value, ast.Dict)
+            ):
+                keys = set()
+                for k in node.value.keys:
+                    if isinstance(k, ast.Constant):
+                        keys.add(k.value)
+                return keys
+        return set()
+
+    def test_suggest_profile_does_not_import_bootstrap_core(self):
+        """suggest_profile.py must not import bootstrap_core (different data shape)."""
+        suggest_path = os.path.join(_SCRIPTS_DIR, "suggest_profile.py")
+        with open(suggest_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        self.assertNotIn("bootstrap_core", source,
+                         "suggest_profile.py must not import bootstrap_core; "
+                         "its PROFILES values are heuristic signals, not template overrides")
+
+    def test_suggest_profile_keys_are_subset_of_core_profiles(self):
+        """Every profile in suggest_profile.PROFILES must exist in bootstrap_core.PROFILES."""
+        sp_keys = self._get_suggest_profile_keys()
+        bc_keys = set(bc.PROFILES.keys())
+        unknown = sp_keys - bc_keys
+        self.assertEqual(
+            unknown, set(),
+            f"suggest_profile.py references profiles not in bootstrap_core: {sorted(unknown)}"
+        )
+
+    def test_generic_absent_from_suggest_profile(self):
+        """'generic' should not appear as a scored profile in suggest_profile.PROFILES."""
+        sp_keys = self._get_suggest_profile_keys()
+        self.assertNotIn(
+            "generic", sp_keys,
+            "'generic' must not be a scored profile in suggest_profile.py; "
+            "it is the 'nothing matched' fallback"
+        )
+
+    def test_non_generic_profiles_all_have_suggest_signals(self):
+        """Every non-generic profile in bootstrap_core must be covered by suggest_profile."""
+        sp_keys = self._get_suggest_profile_keys()
+        bc_non_generic = {k for k in bc.PROFILES if k != "generic"}
+        missing = bc_non_generic - sp_keys
+        self.assertEqual(
+            missing, set(),
+            f"Profiles in bootstrap_core but missing from suggest_profile.py: {sorted(missing)}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
