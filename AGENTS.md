@@ -36,7 +36,7 @@ Out of scope:
 
 ## Operational surfaces
 
-This repository has four operational surfaces:
+This repository has five operational surfaces:
 
 1. **Bootstrap source validation** — confirms that this repo's own required files
    are present and intact.
@@ -64,6 +64,15 @@ This repository has four operational surfaces:
    target repos and validates the result, proving the apply and validate paths work.
    ```
    python scripts/run_fixture_selftest.py
+   ```
+
+5. **Target repo health audit (doctor mode)** — read-only diagnostic tool that
+   inspects a target repository and reports its bootstrap health, drift, and
+   recommended next action. Never mutates any file.
+   ```
+   python scripts/bootstrap_doctor.py --target-dir /path/to/target-repo
+   python scripts/bootstrap_doctor.py --target-dir /path/to/target-repo --verbose
+   python scripts/bootstrap_doctor.py --target-dir /path/to/target-repo --json
    ```
 
 The apply and refresh scripts are both **safe by default**: they never overwrite
@@ -196,7 +205,7 @@ Rules:
 
 The workflow runs these commands in order:
 ```
-python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py
+python -m py_compile scripts/validate_bootstrap.py scripts/apply_bootstrap.py scripts/run_fixture_selftest.py scripts/refresh_bootstrap.py scripts/bootstrap_status.py scripts/suggest_profile.py scripts/bootstrap_doctor.py
 python scripts/validate_bootstrap.py
 python scripts/run_fixture_selftest.py
 ```
@@ -279,6 +288,39 @@ Agents must understand and respect the following contract:
 
 - **The suggestion tool must never mutate the target repo.**
   No file writes, no subprocess calls that modify state. Read-only filesystem inspection only.
+
+---
+
+## Bootstrap doctor — advisory-only rules
+
+`scripts/bootstrap_doctor.py` is a read-only diagnostic tool.
+It inspects a target repo and reports its bootstrap health, drift, and recommended next action.
+Agents must understand and respect the following contract:
+
+- **The doctor is advisory and read-only.**
+  It produces a health report and recommendations for the operator.
+  It never applies scaffolds, runs refresh, or mutates any file.
+
+- **Diagnostic states must stay small and stable.**
+  The six health states are the stable vocabulary for describing target-repo health.
+  Do not add new states without a clear, justified need.
+  Do not rename existing states without a semver minor version bump.
+
+- **Recommendations must remain conservative.**
+  The doctor recommends `--dry-run` first, then the actual command.
+  It never recommends `--force` by default.
+  It never auto-runs apply, refresh, or validate.
+
+- **Future additions should prefer explicit operator guidance over automation.**
+  The doctor's job is to surface information clearly, not to make decisions on behalf of the operator.
+  If adding new checks, keep them read-only and evidence-based.
+
+- **Fixture proof is required for new health state branches.**
+  If a new health state is added, add it to `FIXTURE_EXPECTED_DOCTOR_STATES` in
+  `run_fixture_selftest.py` and prove its classification against a fixture state.
+
+- **The doctor must never shell out to external processes.**
+  All checks use direct filesystem inspection. No subprocess calls.
 
 ---
 

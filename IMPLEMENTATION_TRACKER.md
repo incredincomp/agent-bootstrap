@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 12 complete — Manifest-Driven Bootstrap Profiles**
+**Phase: Milestone 16 complete — Target Repo Bootstrap Doctor / Audit Mode**
 
 ---
 
@@ -33,6 +33,8 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 10 | GitHub Actions CI Regression Gate | ✅ Complete | `.github/workflows/ci.yml` created; runs validate + self-test on push/PR |
 | 11 | Bootstrap Refresh / Upgrade Path | ✅ Complete | `refresh_bootstrap.py` created; manifest updated with refresh section; State D self-test; README/AGENTS updated |
 | 12 | Manifest-Driven Bootstrap Profiles | ✅ Complete | 5 profiles; `--profile` flag; profile written to marker; fixture proof B:PASS C:PASS D:PASS |
+| 13–15 | Versioning, Status, Profiles | ✅ Complete | VERSION, CHANGELOG, bootstrap_status.py, suggest_profile.py; State E; 39 required files, 44 total checks |
+| 16 | Target Repo Bootstrap Doctor / Audit Mode | ✅ Complete | `bootstrap_doctor.py`; 6 health states; State F fixture proof; README/AGENTS/tracker updated |
 
 ---
 
@@ -67,14 +69,37 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 
 ---
 
-## Files created in this run
+## Decisions made in Milestone 16 (target repo bootstrap doctor / audit mode)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| New standalone script (`bootstrap_doctor.py`) rather than extending existing scripts | Doctor is a distinct operational surface (read-only audit); adding it to validate or status would conflate different concerns | Extending bootstrap_status.py (rejected: status reports marker state, not full health classification) |
+| Six health states (unbootstrapped, scaffold-applied-unpopulated, partially-populated, populated-and-healthy, stale-version-review-recommended, profile-mismatch-review-recommended) | Covers the practically distinct states an operator would encounter; maps cleanly to recommended actions without overlap | Fewer states (rejected: insufficient guidance); more states (deferred: YAGNI — adds complexity without clear operator benefit) |
+| Profile suggestion logic duplicated inline rather than imported from suggest_profile.py | Avoids brittle inter-script coupling; doctor is self-contained; logic is short and consistent with the original | Importing or subprocess-calling suggest_profile.py (rejected: import coupling is fragile; subprocess adds complexity) |
+| `--json` output for scripting, `--verbose` for detail, default human-readable | Consistent with suggest_profile.py pattern; operator-friendly by default | JSON-only (rejected: harder to read at command line) |
+| Stale version defined as minor or major version difference (not patch) | Patch differences are safe and common; minor/major signal real template changes worth reviewing | Any version difference (rejected: patch-level noise would generate false refresh recommendations) |
+| Profile mismatch recommendation only when confidence is high or medium | Low-confidence suggestions don't have enough evidence to override a recorded profile decision | Always recommend when profiles differ (rejected: would generate false positives on minimal fixtures) |
+| State F doctor proof: raw=unbootstrapped, scaffold=scaffold-applied-unpopulated | These two states are the most important to prove; they cover the unbootstrapped and freshly-applied cases | Also proving populated-and-healthy (deferred: State C is already proven by validate; doctor proof in run_fixture_selftest.py covers the key states) |
+
+---
+
+## Files created/updated in Milestone 16 (target repo bootstrap doctor / audit mode)
+
+### scripts/
+- `scripts/bootstrap_doctor.py` — new; read-only target repo health audit tool
+- `scripts/validate_bootstrap.py` — added `scripts/bootstrap_doctor.py` to `BOOTSTRAP_REPO_REQUIRED_FILES`
+- `scripts/bootstrap_status.py` — added `scripts/bootstrap_doctor.py` to `CORE_SCRIPTS`
+- `scripts/run_fixture_selftest.py` — added State F (doctor audit proof); added `run_doctor()` helper; updated summary output
 
 ### Root
-- `README.md` — replaced stub with full content
-- `AGENTS.md` — new; execution contract
-- `IMPLEMENTATION_TRACKER.md` — this file; new
-- `bootstrap-manifest.yaml` — new; machine-readable control plane
-- `.gitignore` — new; minimal
+- `AGENTS.md` — added fifth operational surface (doctor); added Bootstrap doctor advisory-only rules section; updated CI compile list
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 16 recorded
+- `README.md` — added Bootstrap doctor section; updated repository layout
+
+### CI
+- `.github/workflows/ci.yml` — added `scripts/bootstrap_doctor.py` to syntax check step
+
+---
 
 ### prompts/
 - `prompts/new-repo-bootstrap.md`
