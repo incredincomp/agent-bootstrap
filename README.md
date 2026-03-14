@@ -469,14 +469,17 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 ├─ schemas/                           ← JSON schemas for structured artifacts
 │  ├─ implementation_tracker.schema.json
 │  └─ repo_discovery.schema.json
-└─ scripts/
-   ├─ validate_bootstrap.py           ← lightweight validation script
-   ├─ apply_bootstrap.py              ← scaffold apply script
-   ├─ refresh_bootstrap.py            ← safe upgrade/refresh script
-   ├─ run_fixture_selftest.py         ← end-to-end self-test harness
-   ├─ bootstrap_status.py            ← source/target repo status report
-   ├─ suggest_profile.py             ← target repo profile suggestion
-   └─ bootstrap_doctor.py            ← target repo health audit (read-only)
+├─ scripts/
+│  ├─ bootstrap_core.py            ← shared internal semantic helpers (Milestone 17)
+│  ├─ validate_bootstrap.py        ← lightweight validation script
+│  ├─ apply_bootstrap.py           ← scaffold apply script
+│  ├─ refresh_bootstrap.py         ← safe upgrade/refresh script
+│  ├─ run_fixture_selftest.py      ← end-to-end self-test harness
+│  ├─ bootstrap_status.py          ← source/target repo status report
+│  ├─ suggest_profile.py           ← target repo profile suggestion
+│  └─ bootstrap_doctor.py          ← target repo health audit (read-only)
+└─ tests/
+   └─ test_bootstrap_core.py       ← contract tests for shared semantics
 ```
 
 ---
@@ -495,6 +498,63 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 
 ---
 
+## Shared bootstrap core
+
+`scripts/bootstrap_core.py` is a small internal module that centralises the
+bootstrap semantics reused across multiple scripts.
+
+### Why it exists
+
+As the tool set grew across milestones, several scripts independently defined
+the same logic: placeholder regex patterns, SEMVER validation, marker field
+parsing, era classification, profile resolution, and template mapping.
+Duplicated definitions drift over time — a fix in one script silently leaves
+others inconsistent.
+
+`bootstrap_core.py` is the single source of truth for:
+- `PLACEHOLDER_RE` and `SEMVER_RE` (shared regex constants)
+- `read_version()` — reads the VERSION file
+- `load_manifest()` — reads the bootstrap-manifest.yaml as text
+- `get_supported_profiles()` / `resolve_profile()` — profile names and validation
+- `parse_bootstrap_marker()` — parses the bootstrap marker table
+- `classify_marker_era()` — classifies markers as pre-version, pre-profile, versioned, or unknown
+- `is_placeholder()`, `has_placeholders()`, `find_placeholders()` — placeholder helpers
+- `resolve_template_mappings()` — effective template mappings per profile
+
+**Scripts remain the main operator interfaces.**  Only the shared semantic
+primitives live in the core.  CLI behaviour, output formatting, and
+script-specific logic stay in each script.
+
+### Contract tests
+
+`tests/test_bootstrap_core.py` contains bounded contract tests that prove
+the shared semantics are stable:
+- regex behaviour
+- version file parsing
+- manifest loading
+- profile enumeration and validation
+- template mapping resolution for all profiles
+- marker parsing from sample text
+- era classification (all four states)
+- placeholder helpers
+
+Run the contract tests locally:
+
+```bash
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+### When to update the core
+
+Update `bootstrap_core.py` and its contract tests when:
+- a shared semantic changes (e.g., new marker field, new era state)
+- a new profile is added (update `PROFILES` and its tests)
+- a placeholder pattern changes
+
+Do not add script-specific output logic to the core.
+
+---
+
 ## Continuous integration
 
 A GitHub Actions workflow at `.github/workflows/ci.yml` runs automatically on every push,
@@ -506,6 +566,7 @@ pull request, and manual trigger.
 |------|---------|
 | Script syntax | `python -m py_compile scripts/*.py` |
 | Bootstrap repo structure | `python scripts/validate_bootstrap.py` |
+| Contract tests | `python -m unittest discover -s tests -p 'test_*.py'` |
 | Fixture end-to-end self-tests | `python scripts/run_fixture_selftest.py` |
 
 ### When it runs
@@ -520,6 +581,7 @@ CI runs the same commands you should run locally before pushing:
 
 ```bash
 python scripts/validate_bootstrap.py
+python -m unittest discover -s tests -p 'test_*.py'
 python scripts/run_fixture_selftest.py
 ```
 

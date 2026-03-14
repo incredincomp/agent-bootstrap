@@ -49,6 +49,9 @@ bootstrap_repo_required_files:
   - scripts/refresh_bootstrap.py
   - scripts/bootstrap_status.py
   - scripts/suggest_profile.py
+  - scripts/bootstrap_doctor.py
+  - scripts/bootstrap_core.py
+  - tests/test_bootstrap_core.py
   - fixtures/targets/minimal-python-service/README.md
   - fixtures/targets/minimal-python-service/conftest.py
   - fixtures/targets/minimal-infra-repo/README.md

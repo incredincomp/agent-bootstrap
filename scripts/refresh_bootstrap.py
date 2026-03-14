@@ -45,55 +45,23 @@ import re
 import subprocess
 import sys
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Regex that matches unfilled template placeholders, e.g. {{REPO_NAME}}
-# ─────────────────────────────────────────────────────────────────────────────
-PLACEHOLDER_RE = re.compile(r"\{\{[A-Z_][A-Z0-9_]*\}\}")
+# Shared bootstrap semantics — profiles, template mappings, marker parsing,
+# placeholder detection, version reading.
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import (  # noqa: E402
+    PLACEHOLDER_RE,
+    PROFILES,
+    DEFAULT_PROFILE,
+    read_version as _core_read_version,
+    resolve_template_mappings,
+    get_bootstrap_marker_path,
+    parse_bootstrap_marker,
+    has_placeholders,
+)
 
-# Bootstrap marker path within a target repo
+# Bootstrap marker path within a target repo (kept for local reference).
 BOOTSTRAP_MARKER_PATH = "bootstrap/BOOTSTRAP_SOURCE.md"
-
-# Supported profiles and their template overrides.
-# Mirrors PROFILES in apply_bootstrap.py — keep both in sync when adding profiles.
-PROFILES = {
-    "generic": {
-        "template_overrides": {},
-    },
-    "python-service": {
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/python-service/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "infra-repo": {
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/infra-repo/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "vscode-extension": {
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/vscode-extension/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "kubernetes-platform": {
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/kubernetes-platform/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-}
-
-DEFAULT_PROFILE = "generic"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Template → target-path mappings with refresh classification policy.
@@ -159,12 +127,8 @@ MARKER_PLACEHOLDERS = {
 
 def read_bootstrap_version(bootstrap_root):
     """Read the bootstrap version from the VERSION file. Returns the version string or 'unknown'."""
-    version_path = os.path.join(bootstrap_root, "VERSION")
-    try:
-        with open(version_path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except OSError:
-        return "unknown"
+    version, _err = _core_read_version(bootstrap_root)
+    return version if version is not None else "unknown"
 
 
 def parse_major_version(version_str):
@@ -257,16 +221,13 @@ def resolve_mappings(profile_name):
     source overrides for the given profile.  Falls back to 'generic' if the
     profile is not recognised.
     """
-    profile = PROFILES.get(profile_name, PROFILES[DEFAULT_PROFILE])
-    overrides = profile["template_overrides"]
-    resolved = []
-    for mapping in TEMPLATE_MAPPINGS:
-        dest = mapping["destination"]
-        if dest in overrides:
-            resolved.append({**mapping, "source": overrides[dest]})
-        else:
-            resolved.append(mapping)
-    return resolved
+    # Preserve refresh_policy fields by merging with the refresh-specific policy map
+    refresh_policies = {m["destination"]: m["refresh_policy"] for m in TEMPLATE_MAPPINGS}
+    resolved_base = resolve_template_mappings(
+        profile_name if profile_name in PROFILES else DEFAULT_PROFILE
+    )
+    return [{**m, "refresh_policy": refresh_policies.get(m["destination"], "safe-if-unpopulated")}
+            for m in resolved_base]
 
 
 def detect_bootstrap_state(target_dir):
@@ -355,7 +316,7 @@ def classify_file(template_content, dest_path, refresh_policy):
         return "unchanged"
 
     # Check for remaining unfilled placeholders as signal of unpopulated state
-    if PLACEHOLDER_RE.search(current_content):
+    if has_placeholders(current_content):
         return "safe-refresh"
 
     return "populated"

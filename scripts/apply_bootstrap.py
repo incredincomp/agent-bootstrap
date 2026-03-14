@@ -27,116 +27,17 @@ import os
 import shutil
 import sys
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Supported profiles.
-#
-# Each profile entry may define 'template_overrides': a mapping from
-# destination path → source template path (relative to the bootstrap repo root)
-# that replaces the common template for that destination.
-#
-# Generic uses all common templates with no overrides.
-# Other profiles override specific templates where profile-specific guidance
-# materially improves usefulness for that repo family.
-# ─────────────────────────────────────────────────────────────────────────────
-PROFILES = {
-    "generic": {
-        "description": "General-purpose profile. Uses all common templates with no overrides.",
-        "template_overrides": {},
-    },
-    "python-service": {
-        "description": (
-            "Python service repositories. Adds Python-specific guidance "
-            "in the vendor knowledge base."
-        ),
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/python-service/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "infra-repo": {
-        "description": (
-            "Infrastructure/platform repositories (Terraform, Pulumi, Ansible, etc.). "
-            "Adds infrastructure-specific guidance in the vendor knowledge base."
-        ),
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/infra-repo/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "vscode-extension": {
-        "description": (
-            "VS Code extension repositories. Adds extension-specific guidance "
-            "in the vendor knowledge base."
-        ),
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/vscode-extension/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-    "kubernetes-platform": {
-        "description": (
-            "Kubernetes platform and operator repositories. Adds platform-specific "
-            "guidance in the vendor knowledge base."
-        ),
-        "template_overrides": {
-            "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md": (
-                "templates/profiles/kubernetes-platform/docs/ai/"
-                "AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template"
-            ),
-        },
-    },
-}
-
-DEFAULT_PROFILE = "generic"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Template → target-path mappings driven by bootstrap-manifest.yaml entries.
-# We keep a static fallback here so the script works even if manifest parsing
-# is extended later.  The source paths are relative to the bootstrap repo root.
-# ─────────────────────────────────────────────────────────────────────────────
-TEMPLATE_MAPPINGS = [
-    {
-        "source": "templates/AGENTS.md.template",
-        "destination": "AGENTS.md",
-        "description": "Execution contract for AI agents",
-    },
-    {
-        "source": "templates/IMPLEMENTATION_TRACKER.md.template",
-        "destination": "IMPLEMENTATION_TRACKER.md",
-        "description": "Live state file — milestones, decisions, validation",
-    },
-    {
-        "source": "templates/docs/ai/REPO_MAP.md.template",
-        "destination": "docs/ai/REPO_MAP.md",
-        "description": "Human + agent-readable repository map",
-    },
-    {
-        "source": "templates/docs/ai/SOURCE_REFRESH.md.template",
-        "destination": "docs/ai/SOURCE_REFRESH.md",
-        "description": "Instructions for re-syncing agent knowledge",
-    },
-    {
-        "source": "templates/docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md.template",
-        "destination": "docs/ai/AI_AGENT_VENDOR_KNOWLEDGE_BASE.md",
-        "description": "Vendor-specific AI knowledge base",
-    },
-    {
-        "source": "templates/bootstrap/BOOTSTRAP_SOURCE.md.template",
-        "destination": "bootstrap/BOOTSTRAP_SOURCE.md",
-        "description": "Bootstrap origin marker",
-    },
-    {
-        "source": "templates/artifacts/ai/repo_discovery.json.template",
-        "destination": "artifacts/ai/repo_discovery.json",
-        "description": "Machine-readable discovery artifact",
-    },
-]
+# Shared bootstrap semantics — profiles, template mappings, marker parsing,
+# placeholder detection, version reading.
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import (  # noqa: E402
+    PROFILES,
+    DEFAULT_PROFILE,
+    read_version as _core_read_version,
+    resolve_template_mappings,
+    get_supported_profiles,
+)
 
 # Placeholders replaced in the bootstrap marker file only.
 # These are bootstrap-system values, not repo-specific discovery content.
@@ -149,12 +50,8 @@ MARKER_PLACEHOLDERS = {
 
 def read_bootstrap_version(bootstrap_root):
     """Read the bootstrap version from the VERSION file. Returns the version string or 'unknown'."""
-    version_path = os.path.join(bootstrap_root, "VERSION")
-    try:
-        with open(version_path, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except OSError:
-        return "unknown"
+    version, _err = _core_read_version(bootstrap_root)
+    return version if version is not None else "unknown"
 
 
 def parse_args():
@@ -208,20 +105,7 @@ def resolve_mappings(profile_name):
     Starts from the common TEMPLATE_MAPPINGS and applies any profile-specific
     source overrides, replacing the template source path for overridden destinations.
     """
-    if profile_name not in PROFILES:
-        raise ValueError(
-            f"Unknown profile '{profile_name}'. "
-            f"Supported profiles: {', '.join(sorted(PROFILES.keys()))}"
-        )
-    overrides = PROFILES[profile_name]["template_overrides"]
-    resolved = []
-    for mapping in TEMPLATE_MAPPINGS:
-        dest = mapping["destination"]
-        if dest in overrides:
-            resolved.append({**mapping, "source": overrides[dest]})
-        else:
-            resolved.append(mapping)
-    return resolved
+    return resolve_template_mappings(profile_name)
 
 
 def find_bootstrap_root(script_path):

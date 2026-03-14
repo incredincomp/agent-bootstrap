@@ -21,6 +21,17 @@ import re
 import subprocess
 import sys
 
+# Shared bootstrap semantics
+_SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _SCRIPTS_DIR)
+from bootstrap_core import (  # noqa: E402
+    SEMVER_RE,
+    read_version as _core_read_version,
+    parse_bootstrap_marker,
+    is_placeholder,
+    classify_marker_era,
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Core scripts expected in the bootstrap source repo
 # ─────────────────────────────────────────────────────────────────────────────
@@ -38,8 +49,6 @@ CORE_DOCS = [
     "docs/BOOTSTRAP_VERSIONING.md",
     "docs/BOOTSTRAP_RELEASE_WORKFLOW.md",
 ]
-
-SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+")
 
 # Markdown heading that introduces the changelog entry for a specific version,
 # e.g. "## [0.13.0]" or "## [0.14.0] — 2026-01-01"
@@ -59,16 +68,7 @@ def find_repo_dir(script_path):
 
 def read_version(repo_dir):
     """Read VERSION file. Returns (version_string, error_message)."""
-    path = os.path.join(repo_dir, "VERSION")
-    if not os.path.isfile(path):
-        return None, "VERSION file not found"
-    try:
-        version = open(path, "r", encoding="utf-8").read().strip()
-    except OSError as exc:
-        return None, f"cannot read VERSION: {exc}"
-    if not SEMVER_RE.match(version):
-        return version, f"VERSION does not look like semver: {version!r}"
-    return version, None
+    return _core_read_version(repo_dir)
 
 
 def read_git_revision(repo_dir):
@@ -239,59 +239,7 @@ def parse_marker(target_dir):
     Returns a dict with the known marker fields (values may be None or the
     raw placeholder string if the field was never filled).
     """
-    marker_path = os.path.join(target_dir, "bootstrap", "BOOTSTRAP_SOURCE.md")
-    result = {
-        "path": marker_path,
-        "found": False,
-        "source_repo": None,
-        "version": None,
-        "revision": None,
-        "date": None,
-        "agent": None,
-        "prompt": None,
-        "profile": None,
-    }
-
-    if not os.path.isfile(marker_path):
-        return result
-
-    result["found"] = True
-
-    # Parse the markdown table rows we care about
-    field_map = {
-        "bootstrap source repository": "source_repo",
-        "bootstrap source version": "version",
-        "bootstrap source revision": "revision",
-        "bootstrap date": "date",
-        "agent / operator": "agent",
-        "prompt used": "prompt",
-        "bootstrap profile": "profile",
-    }
-
-    try:
-        with open(marker_path, "r", encoding="utf-8") as f:
-            for line in f:
-                # Table rows look like: | Field name | value |
-                if "|" not in line:
-                    continue
-                parts = [p.strip() for p in line.strip().strip("|").split("|")]
-                if len(parts) < 2:
-                    continue
-                key = parts[0].lower()
-                value = parts[1] if len(parts) > 1 else ""
-                if key in field_map:
-                    result[field_map[key]] = value or None
-    except OSError:
-        pass
-
-    return result
-
-
-def is_placeholder(value):
-    """Return True if the value looks like an unfilled {{PLACEHOLDER}}."""
-    if value is None:
-        return False
-    return bool(re.match(r"^\{\{[A-Z_][A-Z0-9_]*\}\}$", value.strip()))
+    return parse_bootstrap_marker(target_dir)
 
 
 def report_target_status(target_dir):
@@ -327,11 +275,12 @@ def report_target_status(target_dir):
     print(fmt("Bootstrap profile:", marker["profile"]))
     print()
 
-    # Interpret marker era
+    # Interpret marker era using shared classifier
+    era = classify_marker_era(marker)
     version = marker["version"]
-    if version is None or is_placeholder(version):
+    if era == "pre-version":
         print("  Era:  pre-0.13.0 (no semver version recorded)")
-    elif SEMVER_RE.match(version):
+    elif era == "versioned":
         major = int(version.split(".")[0])
         if major == 0:
             print(f"  Era:  versioned (pre-1.0 series, version {version})")

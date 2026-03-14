@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 16 complete — Target Repo Bootstrap Doctor / Audit Mode**
+**Phase: Milestone 17 complete — Shared Bootstrap Core and Contract Tests**
 
 ---
 
@@ -35,6 +35,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 12 | Manifest-Driven Bootstrap Profiles | ✅ Complete | 5 profiles; `--profile` flag; profile written to marker; fixture proof B:PASS C:PASS D:PASS |
 | 13–15 | Versioning, Status, Profiles | ✅ Complete | VERSION, CHANGELOG, bootstrap_status.py, suggest_profile.py; State E; 39 required files, 44 total checks |
 | 16 | Target Repo Bootstrap Doctor / Audit Mode | ✅ Complete | `bootstrap_doctor.py`; 6 health states; State F fixture proof; README/AGENTS/tracker updated |
+| 17 | Shared Bootstrap Core and Contract Tests | ✅ Complete | `bootstrap_core.py`; 6 scripts refactored; 39 contract tests; CI updated; 41 required files, 46 total checks |
 
 ---
 
@@ -66,6 +67,67 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | BOOTSTRAP_PROFILE auto-filled in marker at apply time | Profile is a bootstrap-system value (like date and version), not a repo-specific discovery value; consistent with existing auto-fill pattern | Leave for agent to fill (rejected: profile is known at apply time; no reason to leave it blank) |
 | Refresh reads profile from marker; no `--profile` flag on refresh | Profile is set at apply time and stored in the marker; refresh inherits it; adding a separate flag would create inconsistency risk | --profile flag on refresh (deferred: not needed; marker provides the authoritative value) |
 | Fixture proof: minimal-python-service → python-service; minimal-infra-repo → infra-repo | These fixtures already represent the right repo shapes; mapping to their natural profiles provides proof without new fixtures | New dedicated profile fixtures (rejected: existing fixtures already cover the shapes) |
+
+---
+
+## Decisions made in Milestone 17 (shared bootstrap core and contract tests)
+
+| Decision | Reason | Alternative considered |
+|----------|--------|----------------------|
+| New `scripts/bootstrap_core.py` module (not `scripts/_bootstrap_core.py`) | Public name is clearer; no need to signal "private" in a repo with no packaging | Underscore prefix (deferred: unnecessary signal for this non-package codebase) |
+| Extracted: PLACEHOLDER_RE, SEMVER_RE, parse_marker, is_placeholder, PROFILES, read_version, classify_era, resolve_template_mappings | These were the most clearly duplicated semantics across 5+ scripts | Extracting everything (rejected: some logic is script-specific; over-extraction adds coupling) |
+| `suggest_profile.py` keeps its own `PROFILES` dict (signal-based) | Its `PROFILES` dict maps to heuristic signal lists, not template overrides — different role; only profile *names* must match core | Importing from bootstrap_core (rejected: different data shape; would require awkward indirection) |
+| Contract tests use stdlib `unittest` in a new `tests/` directory | Consistent with existing dependency-free approach; no pytest needed; small and readable | pytest (rejected: adds external dependency for no benefit at this test volume) |
+| CI gains a new step between validate and selftest | Validates the contract tests run on CI; keeps order logical (structure → semantics → end-to-end) | Running tests inside selftest (rejected: different scopes; separate is cleaner) |
+| Version bumped from 0.13.0 to 0.14.0 (minor bump) | New public module with a stable API surface; additive change to required files list | Patch bump (rejected: new module is a meaningful additive change) |
+| Refresh `resolve_mappings()` merges refresh_policy from local TEMPLATE_MAPPINGS | `refresh_policy` is refresh-specific metadata not in the shared core; merging preserves local metadata without duplicating it in core | Adding refresh_policy to core (rejected: it's a refresh-specific concept) |
+
+---
+
+## Files created/updated in Milestone 17 (shared bootstrap core and contract tests)
+
+### scripts/ (new file)
+- `scripts/bootstrap_core.py` — new; shared semantic helpers for all bootstrap scripts
+
+### tests/ (new directory)
+- `tests/test_bootstrap_core.py` — new; 39 contract tests for bootstrap_core.py
+
+### scripts/ (updated)
+- `scripts/apply_bootstrap.py` — imports PROFILES, DEFAULT_PROFILE, read_version, resolve_template_mappings from bootstrap_core; removed local duplicates
+- `scripts/refresh_bootstrap.py` — imports PLACEHOLDER_RE, PROFILES, DEFAULT_PROFILE, read_version, resolve_template_mappings, get_bootstrap_marker_path, parse_bootstrap_marker, has_placeholders from bootstrap_core; removed local duplicates
+- `scripts/bootstrap_status.py` — imports SEMVER_RE, read_version, parse_bootstrap_marker, is_placeholder, classify_marker_era from bootstrap_core; removed local parse_marker/is_placeholder; uses classify_marker_era for era logic
+- `scripts/bootstrap_doctor.py` — imports PLACEHOLDER_RE, SEMVER_RE, parse_bootstrap_marker, is_placeholder, classify_marker_era, find_placeholders from bootstrap_core; removed local duplicates; classify_era() delegates to classify_marker_era()
+- `scripts/validate_bootstrap.py` — imports PLACEHOLDER_RE from bootstrap_core; added bootstrap_core.py + tests/test_bootstrap_core.py to BOOTSTRAP_REPO_REQUIRED_FILES
+- `scripts/run_fixture_selftest.py` — imports PLACEHOLDER_RE from bootstrap_core
+
+### Root
+- `AGENTS.md` — added Shared bootstrap core and contract tests section; updated CI commands; updated forbidden actions; updated profile-expansion rule
+- `CHANGELOG.md` — added 0.14.0 release entry for Milestone 17
+- `IMPLEMENTATION_TRACKER.md` — this file; Milestone 17 recorded
+- `README.md` — added Shared bootstrap core section; updated repository layout; updated CI table; updated local validation commands
+- `VERSION` — bumped from 0.13.0 to 0.14.0
+
+### CI
+- `.github/workflows/ci.yml` — added bootstrap_core.py to syntax check; added contract test step
+
+### Manifest
+- `bootstrap-manifest.yaml` — added scripts/bootstrap_core.py and tests/test_bootstrap_core.py to bootstrap_repo_required_files
+
+---
+
+## Validation status (Milestone 17)
+
+- `python scripts/validate_bootstrap.py` → PASSED (41 required files, 46 total checks)
+- `python -m unittest discover -s tests -p 'test_*.py'` → 39 tests, 0 failures
+- `python scripts/run_fixture_selftest.py` → B:PASS C:PASS D:PASS E:PASS F:PASS (both fixtures)
+
+---
+
+## Known limitations / follow-up opportunities
+
+- `bootstrap_doctor.py` still carries its own inline profile-suggestion scoring (not imported from `suggest_profile.py`) — this was a pre-Milestone-17 design decision (Milestone 16) preserved for stability.
+- `suggest_profile.py` uses a different `PROFILES` structure (signal-based) than `bootstrap_core.PROFILES` (template-based); the profile names must stay in sync manually. A follow-up could add a consistency check.
+- No `__init__.py` or packaging — intentional; the scripts directory is not a package.
 
 ---
 
