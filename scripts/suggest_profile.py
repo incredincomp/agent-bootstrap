@@ -13,6 +13,32 @@ Usage:
 Exit codes:
     0 — suggestion produced (even if confidence is low or profile is generic)
     1 — error (target directory missing, unreadable, etc.)
+
+JSON output schema (--json flag) — stable contract:
+
+    {
+      "target_dir":            string  — absolute path of the inspected directory,
+      "suggested_profile":     string  — one of: python-service, infra-repo,
+                                         vscode-extension, kubernetes-platform, generic,
+      "confidence":            string  — one of: high, medium, low,
+      "score":                 int     — sum of matched signal weights for the top profile,
+      "max_score":             int     — sum of all signal weights for the top profile,
+      "matched_signals":       [str]   — human-readable labels for matched signals,
+      "alternative_candidates": [      — profiles with score > 0 other than the top:
+        {
+          "profile":   string,
+          "score":     int,
+          "confidence": string,
+          "matched":   [str]
+        }
+      ],
+      "all_scores":            {str: int} — score for every known profile (always present),
+      "recommended_command":   string  — ready-to-run apply_bootstrap.py command
+    }
+
+Fields and their names are stable.  Do not rename or remove fields without a
+semver minor version bump and a CHANGELOG entry.  New fields may be added
+without a version bump, but should be documented here.
 """
 
 import argparse
