@@ -472,7 +472,11 @@ python scripts/validate_bootstrap.py --target-dir /path/to/target-repo
 └─ scripts/
    ├─ validate_bootstrap.py           ← lightweight validation script
    ├─ apply_bootstrap.py              ← scaffold apply script
-   └─ run_fixture_selftest.py         ← end-to-end self-test harness
+   ├─ refresh_bootstrap.py            ← safe upgrade/refresh script
+   ├─ run_fixture_selftest.py         ← end-to-end self-test harness
+   ├─ bootstrap_status.py            ← source/target repo status report
+   ├─ suggest_profile.py             ← target repo profile suggestion
+   └─ bootstrap_doctor.py            ← target repo health audit (read-only)
 ```
 
 ---
@@ -611,6 +615,77 @@ Profile selection determines which template variant is staged into the target re
 The suggestion tool uses simple file-system heuristics — it cannot know team conventions,
 architectural intent, or edge cases that an experienced maintainer would recognize.
 Treat the suggestion as a fast starting point, not an authoritative decision.
+
+---
+
+## Bootstrap doctor — target repo audit
+
+`scripts/bootstrap_doctor.py` is a read-only diagnostic tool that inspects a target
+repository and explains its bootstrap health, drift, and recommended next action.
+
+### What bootstrap doctor does
+
+Runs a single command that answers:
+
+- Is this repo bootstrapped at all?
+- What bootstrap version, profile, and era is recorded?
+- Are all required managed files present?
+- Are `{{PLACEHOLDER}}` markers still present in managed files?
+- What health state is the repo in?
+- Does the recorded profile match the currently suggested profile?
+- Is a refresh likely needed?
+- What exact next command should the operator run?
+
+**The doctor is read-only.** It never creates, modifies, or deletes any files.
+
+### What bootstrap doctor does NOT do
+
+- It does **not** apply the bootstrap scaffold.
+- It does **not** run refresh automatically.
+- It does **not** fill `{{PLACEHOLDER}}` markers.
+- It does **not** validate — that is `validate_bootstrap.py`'s job.
+- It does **not** recommend `--force` flags by default.
+
+### Example commands
+
+```bash
+# Human-readable audit report:
+python scripts/bootstrap_doctor.py --target-dir /path/to/repo
+
+# Verbose output (lists missing files, files with placeholders):
+python scripts/bootstrap_doctor.py --target-dir /path/to/repo --verbose
+
+# JSON output (useful for scripting):
+python scripts/bootstrap_doctor.py --target-dir /path/to/repo --json
+```
+
+### Health states
+
+| State | Meaning |
+|-------|---------|
+| `unbootstrapped` | No marker found; repo has not been bootstrapped |
+| `scaffold-applied-unpopulated` | Marker present; all managed files still have placeholder markers |
+| `partially-populated` | Marker present; some files populated, some placeholders remain |
+| `populated-and-healthy` | Marker present; all required files present; no placeholder markers |
+| `stale-version-review-recommended` | Recorded version is materially behind current source version |
+| `profile-mismatch-review-recommended` | Recorded profile differs from suggested with meaningful evidence |
+
+### Using doctor before apply, refresh, or validate
+
+Run the doctor first to understand what the target repo needs before taking any action.
+
+```bash
+# Step 1: audit the target repo
+python scripts/bootstrap_doctor.py --target-dir /path/to/repo
+
+# Step 2: follow the recommended command from the output
+#   (e.g., suggest_profile, apply --dry-run, validate, or refresh --dry-run)
+
+# Step 3: run the actual action once confident
+```
+
+The doctor output always includes a "Recommended next action(s)" section with
+ready-to-run commands based on the actual health state it detected.
 
 ---
 

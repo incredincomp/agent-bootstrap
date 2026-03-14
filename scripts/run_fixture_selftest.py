@@ -4,7 +4,7 @@ run_fixture_selftest.py
 
 End-to-end self-test harness for the agent-bootstrap system.
 
-Four fixture states are tested for each fixture target repo:
+Six fixture states are tested for each fixture target repo:
 
   State A — raw fixture     : fixture as committed; no bootstrap files present
   State B — scaffold applied: apply_bootstrap.py has run; placeholders remain (expected)
@@ -14,6 +14,9 @@ Four fixture states are tested for each fixture target repo:
                                must not propose overwriting any populated files
   State E — profile suggestion: suggest_profile.py on raw fixture;
                                  must suggest the expected profile for that fixture
+  State F — doctor audit    : bootstrap_doctor.py on raw (unbootstrapped), scaffold-applied
+                               (unpopulated), and populated (healthy) fixture states;
+                               must classify each into the expected health state
 
 Applies the bootstrap scaffold to controlled fixture target repositories and validates
 the result, providing repeatable proof that the apply and validate paths work correctly.
@@ -69,6 +72,24 @@ FIXTURE_PROFILES = {
 FIXTURE_EXPECTED_PROFILES = {
     "minimal-python-service": "python-service",
     "minimal-infra-repo": "infra-repo",
+}
+
+# Expected bootstrap_doctor.py health states for doctor proof (State F).
+# Maps fixture_name -> {doctor_state_label: expected_health_state}.
+# "raw"       — raw fixture directory (State A — unbootstrapped)
+# "scaffold"  — scaffold-applied working copy (State B — unpopulated)
+# "populated" — minimally populated working copy (State C — populated-and-healthy)
+FIXTURE_EXPECTED_DOCTOR_STATES = {
+    "minimal-python-service": {
+        "raw": "unbootstrapped",
+        "scaffold": "scaffold-applied-unpopulated",
+        "populated": "populated-and-healthy",
+    },
+    "minimal-infra-repo": {
+        "raw": "unbootstrapped",
+        "scaffold": "scaffold-applied-unpopulated",
+        "populated": "populated-and-healthy",
+    },
 }
 
 # Files in a bootstrapped target repo that are checked for unfilled placeholders.
@@ -209,6 +230,27 @@ def run_suggest_profile(bootstrap_root, target_dir):
     return result.returncode, result.stdout + result.stderr, suggested
 
 
+def run_doctor(bootstrap_root, target_dir):
+    """
+    Run bootstrap_doctor.py --json against target_dir.
+    Returns (returncode, combined_output, health_state_or_none).
+    """
+    script = os.path.join(bootstrap_root, "scripts", "bootstrap_doctor.py")
+    result = subprocess.run(
+        [sys.executable, script, "--target-dir", target_dir, "--json"],
+        capture_output=True,
+        text=True,
+    )
+    health_state = None
+    if result.returncode == 0:
+        try:
+            data = json.loads(result.stdout)
+            health_state = data.get("health_state")
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return result.returncode, result.stdout + result.stderr, health_state
+
+
 def load_population_data(bootstrap_root, fixture_name):
     """
     Load the population JSON for a fixture.
@@ -284,13 +326,16 @@ def print_indented(text, indent="    "):
 
 def test_fixture(fixture_name, bootstrap_root, work_root, args):
     """
-    Run State B and (optionally) State C tests for one fixture.
+    Run all fixture state tests for one fixture.
 
     Returns a dict:
       {
         "name": str,
         "state_b_pass": bool,
         "state_c_pass": bool or None (None = skipped),
+        "state_d_pass": bool or None,
+        "state_e_pass": bool or None,
+        "state_f_pass": bool or None,
         "note": str,
       }
     """
@@ -302,7 +347,8 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if not os.path.isdir(fixture_source):
         print(f"  [ERROR] Fixture directory not found: {fixture_source}")
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
-                "state_d_pass": None, "state_e_pass": None, "note": "fixture directory missing"}
+                "state_d_pass": None, "state_e_pass": None, "state_f_pass": None,
+                "note": "fixture directory missing"}
 
     fixture_profile = FIXTURE_PROFILES.get(fixture_name)
     if fixture_profile:
@@ -321,7 +367,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if not args.verbose:
             print_indented(out_apply)
         return {"name": fixture_name, "state_b_pass": False, "state_c_pass": False,
-                "state_d_pass": None, "state_e_pass": None,
+                "state_d_pass": None, "state_e_pass": None, "state_f_pass": None,
                 "note": f"apply failed (exit {rc_apply})"}
 
     created_count = out_apply.count("[CREATED]")
@@ -346,7 +392,8 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
 
     if args.state_b_only:
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "state_d_pass": None, "state_e_pass": None, "note": "state-b-only mode"}
+                "state_d_pass": None, "state_e_pass": None, "state_f_pass": None,
+                "note": "state-b-only mode"}
 
     # ── State C: minimally populated, validation should pass ─────────────────
     print(f"\n  State C — minimally populated (validation should pass)")
@@ -354,7 +401,8 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
     if population_data is None:
         print(f"  [SKIP] No population data found at {FIXTURES_POPULATION_DIR}/{fixture_name}.json")
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": None,
-                "state_d_pass": None, "state_e_pass": None, "note": "no population data"}
+                "state_d_pass": None, "state_e_pass": None, "state_f_pass": None,
+                "note": "no population data"}
 
     work_c = copy_fixture(fixture_name, bootstrap_root, os.path.join(work_root, "state-c"))
 
@@ -364,7 +412,7 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
         if args.verbose:
             print_indented(out_apply_c)
         return {"name": fixture_name, "state_b_pass": state_b_pass, "state_c_pass": False,
-                "state_d_pass": None, "state_e_pass": None,
+                "state_d_pass": None, "state_e_pass": None, "state_f_pass": None,
                 "note": f"apply failed for state-c (exit {rc_apply_c})"}
 
     apply_population(work_c, population_data)
@@ -445,12 +493,88 @@ def test_fixture(fixture_name, bootstrap_root, work_root, args):
                 print_indented(out_suggest)
             state_e_pass = False
 
+    # ── State F: doctor audit on raw and scaffold-applied fixtures ────────────
+    print(f"\n  State F — doctor audit (raw=unbootstrapped, scaffold=unpopulated, populated=healthy)")
+    expected_doctor = FIXTURE_EXPECTED_DOCTOR_STATES.get(fixture_name)
+    if expected_doctor is None:
+        print(f"  [SKIP] No expected doctor states configured for this fixture")
+        state_f_pass = None
+    else:
+        state_f_pass = True
+
+        # F1: raw fixture → expected "unbootstrapped"
+        expected_raw = expected_doctor.get("raw")
+        fixture_source = os.path.join(bootstrap_root, FIXTURES_TARGETS_DIR, fixture_name)
+        rc_doc_raw, out_doc_raw, health_raw = run_doctor(bootstrap_root, fixture_source)
+        if args.verbose:
+            print_indented(out_doc_raw)
+        if rc_doc_raw != 0:
+            print(f"  [FAIL] bootstrap_doctor.py exited {rc_doc_raw} on raw fixture")
+            if not args.verbose:
+                print_indented(out_doc_raw)
+            state_f_pass = False
+        elif health_raw == expected_raw:
+            print(f"  doctor (raw fixture): '{health_raw}' — matches expected  [OK]")
+        else:
+            print(f"  [FAIL] doctor (raw): got '{health_raw}', expected '{expected_raw}'")
+            if not args.verbose:
+                print_indented(out_doc_raw)
+            state_f_pass = False
+
+        # F2: scaffold-applied working copy → expected "scaffold-applied-unpopulated"
+        # Reuse the already-applied work_b directory from State B
+        expected_scaffold = expected_doctor.get("scaffold")
+        rc_doc_scaffold, out_doc_scaffold, health_scaffold = run_doctor(bootstrap_root, work_b)
+        if args.verbose:
+            print_indented(out_doc_scaffold)
+        if rc_doc_scaffold != 0:
+            print(f"  [FAIL] bootstrap_doctor.py exited {rc_doc_scaffold} on scaffold fixture")
+            if not args.verbose:
+                print_indented(out_doc_scaffold)
+            state_f_pass = False
+        elif health_scaffold == expected_scaffold:
+            print(f"  doctor (scaffold):   '{health_scaffold}' — matches expected  [OK]")
+        else:
+            print(
+                f"  [FAIL] doctor (scaffold): got '{health_scaffold}', "
+                f"expected '{expected_scaffold}'"
+            )
+            if not args.verbose:
+                print_indented(out_doc_scaffold)
+            state_f_pass = False
+
+        # F3: populated working copy → expected "populated-and-healthy"
+        # Reuse the already-populated work_c directory from State C (only if State C passed)
+        expected_populated = expected_doctor.get("populated")
+        if expected_populated is not None and state_c_pass:
+            rc_doc_pop, out_doc_pop, health_pop = run_doctor(bootstrap_root, work_c)
+            if args.verbose:
+                print_indented(out_doc_pop)
+            if rc_doc_pop != 0:
+                print(f"  [FAIL] bootstrap_doctor.py exited {rc_doc_pop} on populated fixture")
+                if not args.verbose:
+                    print_indented(out_doc_pop)
+                state_f_pass = False
+            elif health_pop == expected_populated:
+                print(f"  doctor (populated):  '{health_pop}' — matches expected  [OK]")
+            else:
+                print(
+                    f"  [FAIL] doctor (populated): got '{health_pop}', "
+                    f"expected '{expected_populated}'"
+                )
+                if not args.verbose:
+                    print_indented(out_doc_pop)
+                state_f_pass = False
+        elif expected_populated is not None and not state_c_pass:
+            print(f"  [SKIP] doctor (populated): skipped — State C did not pass")
+
     return {
         "name": fixture_name,
         "state_b_pass": state_b_pass,
         "state_c_pass": state_c_pass,
         "state_d_pass": state_d_pass,
         "state_e_pass": state_e_pass,
+        "state_f_pass": state_f_pass,
         "note": "",
     }
 
@@ -480,7 +604,7 @@ def main():
     print(f"  Bootstrap root : {bootstrap_root}")
     print(f"  Work directory : {work_root}")
     print(f"  Fixtures       : {', '.join(fixtures_to_test)}")
-    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C + State D + State E'}")
+    print(f"  Mode           : {'State B only' if args.state_b_only else 'State B + State C + State D + State E + State F'}")
 
     results = []
     try:
@@ -522,10 +646,17 @@ def main():
         else:
             e_label = "FAIL"
             all_pass = False
+        if r.get("state_f_pass") is None:
+            f_label = "SKIP"
+        elif r["state_f_pass"]:
+            f_label = "PASS"
+        else:
+            f_label = "FAIL"
+            all_pass = False
         if not r["state_b_pass"]:
             all_pass = False
         note_str = f"  ({r['note']})" if r["note"] else ""
-        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}  D:{d_label}  E:{e_label}{note_str}")
+        print(f"  {r['name']:<40s}  B:{b_label}  C:{c_label}  D:{d_label}  E:{e_label}  F:{f_label}{note_str}")
 
     print()
     if all_pass:
