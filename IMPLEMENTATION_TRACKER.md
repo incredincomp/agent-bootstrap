@@ -38,6 +38,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 17 | Shared Bootstrap Core and Contract Tests | ✅ Complete | `bootstrap_core.py`; 6 scripts refactored; 39 contract tests; CI updated; 41 required files, 46 total checks |
 | 18 | Doctor / Audit Contract Test Expansion | ✅ Complete | `tests/test_bootstrap_doctor.py`; 77 diagnosis contract tests; 42 required files, 47 total checks |
 | 19 | Target Repo Audit JSON Schema Stabilization | ✅ Complete | `schemas/bootstrap_doctor_report.schema.json`; `--json` stabilized with `schema_version` and structured recommendations; 33 JSON contract tests; 43 required files, 49 total checks |
+| CI | CI dedup + concurrency hardening | ✅ Complete | Narrowed `push` trigger to `main`; added workflow-level concurrency; AGENTS.md updated |
 
 ---
 
