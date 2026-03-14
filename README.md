@@ -808,7 +808,93 @@ releases. Only the JSON output is the stable contract.
 
 ---
 
+## Bulk multi-repo audit
+
+`scripts/bulk_audit.py` is a read-only bulk audit tool that inspects multiple target
+repositories and produces a concise aggregate health summary.
+
+### What bulk audit does
+
+- Accepts one or more explicit `--repo` paths and/or a `--root-dir` to scan.
+- Runs the bootstrap doctor audit (read-only) on each discovered repo.
+- Reports per-repo health state, version, and profile.
+- Produces aggregate counts by health state and profile.
+- Identifies high-priority repos that need attention.
+- Outputs machine-readable JSON when `--json` is specified.
+
+**Bulk audit is read-only.** It never creates, modifies, or deletes any files.
+
+### What bulk audit does NOT do
+
+- It does **not** apply the bootstrap scaffold to any repo.
+- It does **not** run refresh or validate on any repo.
+- It does **not** fill `{{PLACEHOLDER}}` markers.
+- It does **not** clone or fetch remote repos.
+- It does **not** build a database or dashboard backend.
+
+### Example commands
+
+```bash
+# Audit explicit repos:
+python scripts/bulk_audit.py --repo /path/to/repo-a --repo /path/to/repo-b
+
+# Discover repos in a parent directory (looks for .git/ in immediate subdirs):
+python scripts/bulk_audit.py --root-dir /path/to/repos
+
+# Scan up to 2 directory levels deep:
+python scripts/bulk_audit.py --root-dir /path/to/repos --max-depth 2
+
+# JSON output to stdout:
+python scripts/bulk_audit.py --root-dir /path/to/repos --json
+
+# JSON output to file:
+python scripts/bulk_audit.py --repo /path/to/repo-a --json --output /tmp/bulk.json
+
+# Mix explicit repos and root-dir:
+python scripts/bulk_audit.py --repo /extra/repo --root-dir /path/to/repos --json
+```
+
+### Repo discovery under --root-dir
+
+Only directories containing a `.git/` subdirectory are treated as repositories.
+This is conservative by design. Do not assume every folder under `--root-dir`
+will be scanned — the tool only picks up clear git repos.
+
+Default max depth is 1 (immediate subdirectories only). Use `--max-depth 2` to
+scan one level deeper.
+
+### Human-readable vs JSON output
+
+The default terminal output is concise and operator-friendly:
+- Scan summary and aggregate counts by health state.
+- Profile distribution.
+- High-priority repos (stale, mismatch, partially-populated, unbootstrapped).
+- Per-repo concise lines.
+
+The `--json` output is the stable machine-readable contract for automation and
+downstream tooling. **Downstream tools should consume the JSON output, not parse
+terminal text.**
+
+**Schema:** `schemas/bootstrap_bulk_audit_report.schema.json`
+
+Key fields in the bulk JSON report:
+- `schema_version` — tracks the bulk report JSON contract version (independent of `VERSION`).
+- `generated_at` — ISO 8601 UTC timestamp.
+- `bootstrap_source_version` — current bootstrap tooling version.
+- `repo_count` — total repos considered (audited + errors).
+- `summary.by_health_state` — aggregate counts per health state.
+- `summary.by_profile` — aggregate counts per profile.
+- `repos` — array of per-repo results, using the same semantic fields as the doctor JSON contract.
+- `errors` — repos that could not be audited, with error details.
+
+Per-repo entries in the bulk report use the same field vocabulary as
+`bootstrap_doctor.py --json` output. Consumers must handle unknown enum values
+defensively — a minor version bump may add new values.
+
+---
+
 ## Bootstrap status and release workflow
+
 
 ### Checking bootstrap repo status
 

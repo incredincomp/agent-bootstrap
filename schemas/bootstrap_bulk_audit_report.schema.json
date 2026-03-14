@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/agent-bootstrap/schemas/bootstrap_bulk_audit_report.schema.json",
+  "title": "BootstrapBulkAuditReport",
+  "description": "Schema for the machine-readable JSON output of bulk_audit.py --json. Downstream tooling should depend on this structured output rather than parsing human-readable terminal text. Per-repo entries use the same semantic vocabulary as the bootstrap doctor JSON contract. Note: schema_version tracks the shape of this JSON contract independently of the bootstrap repo VERSION file — they are different versioning axes.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "bootstrap_source_version",
+    "repo_count",
+    "summary",
+    "repos",
+    "errors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this JSON output contract — independent of the bootstrap repo VERSION file. Follows semver: patch = additive/clarifying changes or new optional fields; minor = new required fields or new enum values; major = renamed/removed required fields or semantically breaking changes.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 UTC timestamp when this report was generated.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "bootstrap_source_version": {
+      "type": ["string", "null"],
+      "description": "Bootstrap source repository version read from the VERSION file, or null if unreadable."
+    },
+    "repo_count": {
+      "type": "integer",
+      "description": "Total number of repository paths considered (successful audits + errors).",
+      "minimum": 0
+    },
+    "summary": {
+      "$ref": "#/definitions/BulkSummary"
+    },
+    "repos": {
+      "type": "array",
+      "description": "Per-repo audit results for all successfully audited repositories.",
+      "items": {
+        "$ref": "#/definitions/RepoAuditResult"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Repos that could not be audited, with error details. Processing continues for other repos when one fails.",
+      "items": {
+        "$ref": "#/definitions/AuditError"
+      }
+    }
+  },
+  "definitions": {
+    "BulkSummary": {
+      "type": "object",
+      "description": "Aggregate counts across all successfully audited repositories.",
+      "required": ["by_health_state", "by_profile"],
+      "additionalProperties": false,
+      "properties": {
+        "by_health_state": {
+          "type": "object",
+          "description": "Count of repos in each health state. Uses the stable health state vocabulary from the bootstrap doctor contract. Consumers must handle unknown keys defensively — a minor version bump may add new state values.",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "by_profile": {
+          "type": "object",
+          "description": "Count of repos by recorded or suggested profile. Key is the profile name (e.g., 'python-service', 'infra-repo', 'generic').",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "RepoAuditResult": {
+      "type": "object",
+      "description": "Audit result for a single repository. Uses the same semantic fields as the bootstrap doctor JSON contract. Consumers must handle unknown enum values defensively.",
+      "required": [
+        "target_dir",
+        "bootstrapped",
+        "health_state",
+        "marker_status",
+        "marker_era",
+        "required_files_status",
+        "missing_files",
+        "placeholder_status",
+        "files_with_placeholders",
+        "total_placeholder_count",
+        "recommendations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target_dir": {
+          "type": "string",
+          "description": "Absolute path to the target repository.",
+          "minLength": 1
+        },
+        "bootstrapped": {
+          "type": "boolean",
+          "description": "True if a bootstrap marker file was found."
+        },
+        "health_state": {
+          "type": "string",
+          "description": "Overall bootstrap health classification. Stable vocabulary from the doctor contract.",
+          "enum": [
+            "unbootstrapped",
+            "scaffold-applied-unpopulated",
+            "partially-populated",
+            "populated-and-healthy",
+            "stale-version-review-recommended",
+            "profile-mismatch-review-recommended"
+          ]
+        },
+        "marker_status": {
+          "type": "string",
+          "enum": ["missing", "present", "incomplete"]
+        },
+        "marker_era": {
+          "type": "string",
+          "enum": ["pre-version", "pre-profile", "versioned", "unknown"]
+        },
+        "recorded_version": {
+          "type": ["string", "null"]
+        },
+        "source_version": {
+          "type": ["string", "null"]
+        },
+        "recorded_profile": {
+          "type": ["string", "null"]
+        },
+        "suggested_profile": {
+          "type": ["string", "null"]
+        },
+        "profile_confidence": {
+          "type": ["string", "null"],
+          "enum": ["high", "medium", "low", null]
+        },
+        "profile_alignment": {
+          "type": ["string", "null"],
+          "enum": ["aligned", "mismatch", "insufficient-evidence", "not-recorded", null]
+        },
+        "required_files_status": {
+          "type": "string",
+          "enum": ["all-present", "minor-gaps", "major-gaps"]
+        },
+        "missing_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "placeholder_status": {
+          "type": "string",
+          "enum": ["placeholders-remain", "no-placeholders-detected", "mixed"]
+        },
+        "files_with_placeholders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "total_placeholder_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Recommendation"
+          }
+        }
+      }
+    },
+    "AuditError": {
+      "type": "object",
+      "description": "An error that prevented a repository from being audited.",
+      "required": ["repo_path", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "repo_path": {
+          "type": "string",
+          "description": "Path to the repository that could not be audited.",
+          "minLength": 1
+        },
+        "error": {
+          "type": "string",
+          "description": "Description of the error.",
+          "minLength": 1
+        }
+      }
+    },
+    "Recommendation": {
+      "type": "object",
+      "description": "A structured recommendation. Consumers must branch on 'type', not parse 'value'.",
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["command", "note"]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

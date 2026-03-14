@@ -75,6 +75,16 @@ This repository has five operational surfaces:
    python scripts/bootstrap_doctor.py --target-dir /path/to/target-repo --json
    ```
 
+6. **Bulk multi-repo audit** — read-only fleet-level audit tool that inspects
+   multiple target repositories and produces an aggregate health summary.
+   Never mutates any file.
+   ```
+   python scripts/bulk_audit.py --repo /path/to/repo-a --repo /path/to/repo-b
+   python scripts/bulk_audit.py --root-dir /path/to/repos
+   python scripts/bulk_audit.py --root-dir /path/to/repos --json
+   python scripts/bulk_audit.py --repo /path/to/repo-a --json --output /tmp/bulk.json
+   ```
+
 The apply and refresh scripts are both **safe by default**: they never overwrite
 populated files unless `--force` is passed explicitly. Always run with `--dry-run`
 first when unsure.
@@ -411,6 +421,45 @@ Agents must understand and respect the following contract:
   Human-readable output is for interactive operator use — it may be verbose, ergonomic, and informal.
   JSON output is for automation — it must be compact, stable, and schema-conforming.
   Do not conflate these two purposes when making changes.
+
+---
+
+## Bulk audit — aggregation layer rules
+
+`scripts/bulk_audit.py` is a read-only fleet-level aggregation tool built on top of
+the bootstrap doctor JSON contract.
+
+### Rules for agents
+
+- **Bulk audit is an aggregation layer over the doctor contract.**
+  Per-repo semantics come from `bootstrap_doctor.audit()`. Do not invent a parallel
+  per-repo audit system inside `bulk_audit.py`.
+
+- **Bulk audit must remain read-only at all times.**
+  It never applies scaffolds, runs refresh, validates, or modifies any file.
+  If you change bulk_audit.py, preserve this invariant unconditionally.
+
+- **Downstream tooling must depend on the JSON output, not on terminal text.**
+  The `--json` flag produces a stable, schema-backed report.
+  `schemas/bootstrap_bulk_audit_report.schema.json` is the formal contract.
+  Human-readable output may change phrasing; JSON must not break consumers.
+
+- **Future changes to doctor JSON must consider bulk audit compatibility.**
+  The per-repo entries in the bulk JSON report mirror the doctor JSON contract fields.
+  If `bootstrap_doctor.py` changes its JSON shape, review `bulk_audit.py`
+  and `schemas/bootstrap_bulk_audit_report.schema.json` for required updates.
+
+- **Repo discovery must stay conservative.**
+  Under `--root-dir`, only directories containing `.git/` are treated as repos.
+  Do not loosen this without an explicit, justified policy decision.
+
+- **Bulk audit schema versioning follows the same rules as the doctor schema.**
+  `schema_version` in the bulk JSON output is independent of the bootstrap `VERSION`
+  file. Bump it according to semver: patch for additive changes, minor for new required
+  fields or enum values, major for breaking changes.
+
+- **Keep bulk_audit.py small, readable, and stdlib-only.**
+  Do not add heavyweight CLI frameworks, network access, or database backends.
 
 ---
 

@@ -7,7 +7,7 @@ Update this file at every milestone boundary. Do not let it go stale.
 
 ## Current phase
 
-**Phase: Milestone 18 complete — Target Repo Bootstrap Doctor / Audit Contract Test Expansion**
+**Phase: Milestone 20 complete — Bulk Multi-Repo Audit Mode**
 
 ---
 
@@ -39,6 +39,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 18 | Doctor / Audit Contract Test Expansion | ✅ Complete | `tests/test_bootstrap_doctor.py`; 77 diagnosis contract tests; 42 required files, 47 total checks |
 | 19 | Target Repo Audit JSON Schema Stabilization | ✅ Complete | `schemas/bootstrap_doctor_report.schema.json`; `--json` stabilized with `schema_version` and structured recommendations; 33 JSON contract tests; 43 required files, 49 total checks |
 | CI | CI dedup + concurrency hardening | ✅ Complete | Narrowed `push` trigger to `main`; added workflow-level concurrency; AGENTS.md updated |
+| 20 | Bulk Multi-Repo Audit Mode | ✅ Complete | `scripts/bulk_audit.py`; `schemas/bootstrap_bulk_audit_report.schema.json`; 40 tests; 46 required files, 53 total checks |
 
 ---
 
@@ -240,6 +241,61 @@ so downstream tooling can depend on it safely without coupling to human-readable
   (fixture integration); covered by unit tests in prior milestone.
 - Schema does not validate per-file details beyond list membership — deliberate to keep contract
   small and stable.
+
+---
+
+## Milestone 20 — Bulk Multi-Repo Audit Mode
+
+**Objective:** Add a read-only bulk audit tool that can inspect multiple target repositories
+and produce a concise aggregate health summary using the stabilised bootstrap doctor JSON
+contract.
+
+**Design chosen:** New script `scripts/bulk_audit.py` that imports `bootstrap_doctor.audit()`
+directly (no shell scraping). Produces human-readable and structured JSON output.
+Per-repo JSON shape mirrors the doctor contract; bulk report adds a summary layer.
+
+**Files created:**
+- `scripts/bulk_audit.py` — read-only bulk multi-repo audit tool
+- `schemas/bootstrap_bulk_audit_report.schema.json` — formal JSON Schema for bulk report output
+- `tests/test_bulk_audit.py` — 40 contract tests covering discovery, auditing, aggregation, JSON shape, read-only behaviour, and schema presence
+
+**Files updated:**
+- `scripts/validate_bootstrap.py` — added `scripts/bulk_audit.py`, `schemas/bootstrap_bulk_audit_report.schema.json`, and `tests/test_bulk_audit.py` to required files; added new schema to `JSON_FILES_TO_VALIDATE`
+- `bootstrap-manifest.yaml` — added new script, schema, and test to `bootstrap_repo_required_files`
+- `README.md` — added "Bulk multi-repo audit" section with commands, discovery behaviour, and JSON contract description
+- `AGENTS.md` — added "Bulk audit — aggregation layer rules" section; updated "Operational surfaces" to list bulk audit as surface 6
+
+**Bulk report structure:**
+- `schema_version` — bulk contract version (`1.0.0`, independent of bootstrap `VERSION`)
+- `generated_at` — ISO 8601 UTC timestamp
+- `bootstrap_source_version` — current bootstrap tooling version
+- `repo_count` — total repos considered (audited + errors)
+- `summary.by_health_state` — aggregate counts per health state
+- `summary.by_profile` — aggregate counts per recorded/suggested profile
+- `repos` — per-repo results using doctor JSON contract fields
+- `errors` — repos that could not be audited with error details
+
+**Design rationale:**
+- Import `bootstrap_doctor.audit()` directly — no shell scraping, no output parsing
+- Per-repo JSON entries reuse all doctor JSON fields for consistency
+- Repo discovery under `--root-dir` limited to directories containing `.git/` — conservative by design
+- `--max-depth` defaults to 1 (immediate subdirectories only)
+- stdlib-only; no external dependencies
+
+**Validation performed:**
+- `python scripts/validate_bootstrap.py` → 46 files present, 53 checks passed
+- `python -m unittest discover -s tests -p 'test_*.py' -v` → 193 tests, all passed
+- `python scripts/run_fixture_selftest.py` → B:PASS C:PASS D:PASS E:PASS F:PASS for both fixtures
+- `python -m py_compile scripts/bulk_audit.py` → no syntax errors
+- Manual smoke test: `python scripts/bulk_audit.py --repo . --json` → valid structured JSON output
+
+**Known limitations (Milestone 20):**
+- Repo discovery under `--root-dir` requires `.git/` presence; repos without a `.git/` directory
+  are not discovered (deliberate conservative design).
+- The bulk JSON schema does not enforce that `repos[].health_state` counts match `summary.by_health_state`
+  (cross-field consistency validation not supported by JSON Schema draft-07).
+- No fixture-level state proof added to `run_fixture_selftest.py` for bulk audit; covered instead
+  by explicit integration tests in `tests/test_bulk_audit.py` using the same fixture directories.
 
 ---
 
@@ -727,13 +783,14 @@ See "Known limitations" above under the Milestone 14 entry.
 
 ## Next strongest bounded milestone
 
-**Milestone 20 — CHANGELOG and VERSION bump for Milestone 19**
+**Milestone 20 — Bulk Multi-Repo Audit Mode (complete)**
 
-Update CHANGELOG.md and VERSION to reflect the Milestone 19 release (JSON schema stabilization).
+See Milestone 20 entry above.
 
-Scope:
-- Bump VERSION to `0.16.0` (minor bump: new schema file, new required field `schema_version` in JSON output)
-- Update CHANGELOG.md with Milestone 19 release notes
-- Keep the existing release workflow
+**Milestone 21 — Recommended next steps**
 
-Estimated size: Minimal (2 files: `VERSION`, `CHANGELOG.md`)
+Options for the next bounded milestone:
+- CHANGELOG and VERSION bump to reflect Milestones 19–20 (minor bump: new schema file, bulk audit tool)
+- Expand fixture self-test with a stale-version or profile-mismatch State F variant
+- Add `prompts/target-repo-audit.md` for ongoing maintenance sessions
+- Add profile-specific fixture proof for vscode-extension or kubernetes-platform
