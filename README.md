@@ -779,12 +779,15 @@ python scripts/bootstrap_doctor.py --target-dir /path/to/repo --json
 
 The JSON contract guarantees:
 
-- A `schema_version` field (semver) identifying the contract version.
+- A `schema_version` field (semver) identifying the **JSON contract version** — this is
+  independent of the bootstrap repo's `VERSION` file. The two version axes serve different
+  purposes: `schema_version` tracks the shape of this JSON output; `VERSION` tracks the
+  bootstrap tooling release. Do not conflate them.
 - Stable, bounded `health_state` values — the six health state strings are the
   stable vocabulary and will not be renamed without a semver minor version bump.
 - Structured `recommendations` — each item is an object with `type` (`"command"` or
-  `"note"`) and `value`, so automation can extract runnable commands without string
-  parsing.
+  `"note"`) and `value`. Consumers must **branch on `type`** to distinguish runnable
+  commands from informational notes — do not parse `value` to infer the type.
 - Bounded enum values for `marker_status`, `marker_era`, `profile_confidence`,
   `profile_alignment`, `required_files_status`, and `placeholder_status`.
 
@@ -795,6 +798,10 @@ The JSON contract guarantees:
 | Additive optional fields or clarifying documentation | patch |
 | New required fields or new enum values | minor |
 | Renamed/removed required fields or changed semantics | major |
+
+> **Enum growth note:** A minor version bump may add new enum values (e.g., a new
+> `health_state`). Consumers must handle unknown enum values defensively — do not
+> treat the current enum sets as permanently frozen.
 
 Human-readable output (the default, without `--json`) may change phrasing across
 releases. Only the JSON output is the stable contract.
