@@ -22,6 +22,12 @@ Health states (stable names — do not rename without a version bump):
     stale-version-review-recommended  — target version materially behind current source
     profile-mismatch-review-recommended — marker profile differs from suggested with meaningful evidence
 
+Marker era values (aligned with bootstrap_status.py semantics):
+    pre-version  — no version recorded, or version is still a placeholder
+    pre-profile  — version is semver but profile not recorded or still a placeholder
+    versioned    — both version (semver) and profile are recorded
+    unknown      — version field is present but not a recognizable semver value
+
 This tool is advisory and read-only. It never creates, modifies, or deletes files.
 """
 
@@ -369,7 +375,13 @@ def classify_era(marker):
     """
     Classify the marker era based on recorded version and profile fields.
 
-    Returns one of: "pre-version", "pre-profile", "versioned"
+    Returns one of: "pre-version", "pre-profile", "versioned", "unknown"
+
+    Semantics are aligned with bootstrap_status.py's era interpretation:
+      pre-version — version is absent, a placeholder, or not a semver string
+      pre-profile  — version is valid semver but profile is absent or placeholder
+      versioned    — version is valid semver and profile is recorded
+      unknown      — version field is present but not a recognizable semver value
     """
     version = marker.get("version")
     profile = marker.get("profile")
@@ -377,7 +389,8 @@ def classify_era(marker):
     if version is None or is_placeholder(version):
         return "pre-version"
     if not SEMVER_RE.match(version):
-        return "pre-version"
+        # Version field present but not parseable semver — mirrors bootstrap_status.py "unknown" era
+        return "unknown"
 
     if profile is None or is_placeholder(profile):
         return "pre-profile"
