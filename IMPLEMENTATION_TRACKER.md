@@ -37,6 +37,7 @@ Build a reusable, production-grade AI agent bootstrap repository that serves as 
 | 16 | Target Repo Bootstrap Doctor / Audit Mode | ✅ Complete | `bootstrap_doctor.py`; 6 health states; State F fixture proof; README/AGENTS/tracker updated |
 | 17 | Shared Bootstrap Core and Contract Tests | ✅ Complete | `bootstrap_core.py`; 6 scripts refactored; 39 contract tests; CI updated; 41 required files, 46 total checks |
 | 18 | Doctor / Audit Contract Test Expansion | ✅ Complete | `tests/test_bootstrap_doctor.py`; 77 diagnosis contract tests; 42 required files, 47 total checks |
+| CI | CI dedup + concurrency hardening | ✅ Complete | Narrowed `push` trigger to `main`; added workflow-level concurrency; AGENTS.md updated |
 
 ---
 
